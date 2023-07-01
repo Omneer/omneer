@@ -1,11 +1,6 @@
 import torch
 import csv
 import numpy as np
-from torch.utils.data import DataLoader
-from sklearn.experimental import enable_iterative_imputer
-from sklearn.impute import IterativeImputer
-from sklearn.preprocessing import QuantileTransformer, RobustScaler, PowerTransformer
-from sklearn.impute import KNNImputer
 
 class Data(torch.utils.data.Dataset):
 
@@ -19,8 +14,6 @@ class Data(torch.utils.data.Dataset):
         self.y = [row[self.label] for row in self.content]
         self.x = np.array(self.x, dtype = np.float32)
         self.y = np.array(self.y, dtype = np.float32)
-        self.x = self.impute_missing_values(self.x)
-        self.x = self.normalize_features(self.x)
 
 
     def read_csv(self, csv_file):
@@ -64,43 +57,25 @@ class Data(torch.utils.data.Dataset):
     def all(self):
         
         return self.x, self.y
-    
-    def impute_missing_values(self, x):
-        imputer = IterativeImputer(max_iter=10, random_state=0)
-        return imputer.fit_transform(x)
 
-    def normalize_features(self, x):
-        qt = QuantileTransformer().fit(x)
-        x_qt = qt.transform(x)
-        scaler = RobustScaler().fit(x_qt)
-        return scaler.transform(x_qt)
 
 if __name__ == "__main__":
     
     import pandas as pd
 
-    df = pd.read_csv('Final.csv', encoding='latin1')
+    df = pd.read_csv('./data/PD LCMS pos.csv', encoding='latin1')
     data = Data(
         label = 'PD',
         features = df.iloc[:, 1:-1],
-        csv_dir = 'Final.csv',
+        csv_dir = './data/PD LCMS pos.csv',
     )
-
-
-    print(df)
     
-    """
-    
+    # dataloader = DataLoader(data,
+    #                         batch_size=4,
+    #                         shuffle=True)
     
     
-    dataloader = DataLoader(data,
-                             batch_size=4,
-                             shuffle=True)
-    
-    
-    for batch_input, batch_label in dataloader:
-         print(batch_input.shape, batch_label.shape)
-         print(batch_input)
-         print(batch_label)
-
-    """
+    # for batch_input, batch_label in dataloader:
+    #     # print(batch_input.shape, batch_label.shape)
+    #     print(batch_input)
+    #     print(batch_label)

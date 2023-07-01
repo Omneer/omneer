@@ -1,0 +1,8 @@
+README.md
+setup.py
+omneer.egg-info/PKG-INFO
+omneer.egg-info/SOURCES.txt
+omneer.egg-info/dependency_links.txt
+omneer.egg-info/entry_points.txt
+omneer.egg-info/requires.txt
+omneer.egg-info/top_level.txt
