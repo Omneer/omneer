@@ -28,7 +28,7 @@ Utilizing the Omneer SDK, developers can deliver:
 
 See the SDK in action by following the steps below to register your first workflow with Omneer.
 
-First, install latch through `pip`.
+First, install omneer through `pip`.
 
 ```
 $ python3 pip install omneer
