@@ -12,7 +12,7 @@ from .bootstrap import bootstrap
 from .plot import plot_roc, plot_pr
 
 def main(csvfile, model_name):
-    assert model_name in ['mlp', 'xgb', 'rf', 'lr', 'svm', 'lda']
+    assert model_name in ['mlp', 'xgb', 'rf', 'lr', 'svm', 'lda', 'ensemble']
 
     # Directory to save results
     comb_dir = './test crank-ms'

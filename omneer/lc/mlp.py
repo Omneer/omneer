@@ -5,6 +5,7 @@ import tqdm
 from sklearn.base import BaseEstimator
 from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
 from sklearn.utils.multiclass import unique_labels
+from sklearn.base import BaseEstimator, ClassifierMixin
 from .dataset import Data
 
 __all__ = ['MLPClassifier']
@@ -25,7 +26,7 @@ class Swish(nn.Module):
     def forward(self, input):
         return SwishFunction.apply(input)
 
-class MLPClassifier(BaseEstimator):
+class MLPClassifier(BaseEstimator, ClassifierMixin):
     ''' ... '''
     def __init__(
         self,
@@ -49,6 +50,9 @@ class MLPClassifier(BaseEstimator):
         ''' ... '''
         # input validation
         X, y = self._validate_inputs(X, y)
+
+        # Assign unique labels from the y training data to self.classes_
+        self.classes_ = np.unique(y)
 
         # for PyTorch computational efficiency
         torch.set_num_threads(1)
@@ -162,7 +166,6 @@ class MLPClassifier(BaseEstimator):
 
         return X, y
 
-
 class MLP(nn.Module):
     ''' ... '''
     def __init__(self, in_dim, hidden_dims, out_dim):
@@ -175,11 +178,12 @@ class MLP(nn.Module):
         hidden_dims.insert(0, in_dim)
         for _in, _out in zip(hidden_dims, hidden_dims[1:]):
             hidden_layers.append(nn.Linear(_in, _out))
-            hidden_layers.append(Swish())  # Use custom Swish activation function
+            hidden_layers.append(nn.LeakyReLU())  # Use custom Swish activation function
+            hidden_layers.append(nn.BatchNorm1d(_out))  # Use Batch Normalization
+            hidden_layers.append(nn.Dropout(0.5))  # Add dropout for regularization
 
         # initialize the entire network
         self.module = nn.Sequential(
-            nn.BatchNorm1d(in_dim),
             *hidden_layers,
             nn.Linear(hidden_dims[-1], out_dim),
         )
@@ -190,7 +194,6 @@ class MLP(nn.Module):
         x = torch.sigmoid(x)
         x = x.squeeze()
         return x
-
     
 class HelperDataset(torch.utils.data.Dataset):
     ''' ... '''

@@ -1,11 +1,16 @@
 import torch
 import csv
+import pandas as pd
 import numpy as np
 from torch.utils.data import DataLoader
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 from sklearn.preprocessing import QuantileTransformer, RobustScaler, PowerTransformer
 from sklearn.impute import KNNImputer
+from sklearn.cross_decomposition import PLSRegression
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.decomposition import KernelPCA
+from sklearn.linear_model import Lasso
 
 class Data(torch.utils.data.Dataset):
 
@@ -20,7 +25,10 @@ class Data(torch.utils.data.Dataset):
         self.x = np.array(self.x, dtype = np.float32)
         self.y = np.array(self.y, dtype = np.float32)
         self.x = self.impute_missing_values(self.x)
+        #self.x = self.polynomial_features(self.x)
+        #self.x = self.lasso_feature_selection(self.x, self.y)
         self.x = self.normalize_features(self.x)
+        #self.x = self.pls_da_transform(self.x)
 
 
     def read_csv(self, csv_file):
@@ -71,9 +79,21 @@ class Data(torch.utils.data.Dataset):
 
     def normalize_features(self, x):
         qt = QuantileTransformer().fit(x)
-        x_qt = qt.transform(x)
-        scaler = RobustScaler().fit(x_qt)
-        return scaler.transform(x_qt)
+        return qt.transform(x)
+    
+    def pls_da_transform(self, x):
+        pls_da = PLSRegression(n_components=10)
+        return pls_da.fit_transform(x, self.y)
+
+    def polynomial_features(self, x):
+        poly = PolynomialFeatures(degree=2, interaction_only=True, include_bias=False)
+        return poly.fit_transform(x)
+        
+    def lasso_feature_selection(self, x, y):
+        lasso = Lasso(alpha=0.1)
+        lasso.fit(x, y)
+        return x[:, lasso.coef_ != 0]
+
 
 if __name__ == "__main__":
     
