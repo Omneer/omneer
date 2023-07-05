@@ -5,11 +5,14 @@ import sys
 import argparse
 import matplotlib.pyplot as plt
 import pandas as pd
+from scipy import stats
 from omneer.data.preprocessing.preprocess import Data
-from omneer.processing.misc import get_metrics
+from omneer.processing.misc import get_metrics, get_calibration_curve, pr_auc_score, compute_ci
 from omneer.model.train import train
 from omneer.processing.bootstrap import bootstrap
 from omneer.visualization.plot import plot_roc, plot_pr
+from sklearn.metrics import confusion_matrix
+
 
 def main(csvfile, model_name):
     assert model_name in ['mlp', 'xgb', 'rf', 'lr', 'svm', 'lda', 'ensemble']
@@ -61,7 +64,8 @@ def main(csvfile, model_name):
     met_all = get_metrics(y_true_all, y_pred_all, scores_all)
     for k, v in met_all.items():
         if k not in ['Confusion Matrix']:
-            print('{}:\t{:.4f} \u00B1 {:.4f}'.format(k, v[0], v[1]).expandtabs(20))
+            lower, upper = compute_ci(v)  # Compute confidence interval
+            print('{}:\t{:.4f} \u00B1 {:.4f}'.format(k, v[0], v[1], lower, upper).expandtabs(20))
 
     # Plot ROC, PR curves
     fig = plt.figure(figsize=(6, 6), dpi=100)

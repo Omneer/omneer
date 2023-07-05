@@ -30,6 +30,8 @@ class Data(torch.utils.data.Dataset):
         self.x = self.normalize_features(self.x)
         #self.x = self.pls_da_transform(self.x)
 
+        self.save_preprocessed_data('Preprocessed_Final.csv')
+
 
     def read_csv(self, csv_file):
 
@@ -94,33 +96,31 @@ class Data(torch.utils.data.Dataset):
         lasso.fit(x, y)
         return x[:, lasso.coef_ != 0]
 
+    def save_preprocessed_data(self, file_name):
+        # Prepare a DataFrame
+        df = pd.DataFrame(self.x)
+        df.columns = self.features
+        df[self.label] = self.y
+
+        # Save the DataFrame to a csv file
+        df.to_csv(file_name, index=False)
+
 
 if __name__ == "__main__":
     
     import pandas as pd
 
     df = pd.read_csv('Final.csv', encoding='latin1')
+
+    # The name of the column in your csv file that contains the labels
+    label = 'PD'
+
+    # The names of the columns in your csv file that contain the features
+    features = df.columns[1:].tolist()
+
+    # Initialize the Data object
     data = Data(
-        label = 'PD',
-        features = df.iloc[:, 1:-1],
+        label = label,
+        features = features,
         csv_dir = 'Final.csv',
     )
-
-
-    print(df)
-    
-    """
-    
-    
-    
-    dataloader = DataLoader(data,
-                             batch_size=4,
-                             shuffle=True)
-    
-    
-    for batch_input, batch_label in dataloader:
-         print(batch_input.shape, batch_label.shape)
-         print(batch_input)
-         print(batch_label)
-
-    """

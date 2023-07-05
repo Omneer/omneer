@@ -61,14 +61,14 @@ def train(
                         lambda_l2=0.0004719190005714674, device='cpu'))
         ]
         
-        final_model = LogisticRegression()  # Change this to experiment with different final estimators
-    
-        model = StackingClassifier(estimators=base_models, final_estimator=final_model, cv=10)
+        voting_model = VotingClassifier(estimators=base_models, voting='soft')
+        model = voting_model
 
         """
 
-        voting_model = VotingClassifier(estimators=base_models, voting='soft')
-        model = voting_model
+        final_model = LogisticRegression()  # Change this to experiment with different final estimators
+    
+        model = StackingClassifier(estimators=base_models, final_estimator=final_model, cv=10)
 
         # Use GradientBoostingClassifier as the final estimator
         final_model = GradientBoostingClassifier(random_state=42)
