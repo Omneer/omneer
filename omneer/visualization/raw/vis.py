@@ -218,25 +218,25 @@ def main():
             df_melt = transform_data(df)
 
             # Create boxplot
-            #create_boxplot(df_melt)
+            create_boxplot(df_melt)
 
             # Create pairplot
-            #create_pairplot(df)
+            create_pairplot(df)
 
             # Calculate correlations
             corr = calculate_correlations(df)
 
             # Create heatmap
-            #create_heatmap(corr)
+            create_heatmap(corr)
 
             # Determine the grid for subplots
             num_rows, num_cols = determine_grid(df)
 
             # Create histograms
-            #create_histograms(df, num_rows, num_cols)
+            create_histograms(df, num_rows, num_cols)
 
             # Create violin plot
-            #create_violinplot(df_melt)
+            create_violinplot(df_melt)
 
             # Create t-SNE plot
             create_tsne(df)
