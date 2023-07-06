@@ -6,12 +6,23 @@ import warnings
 def calculate_feature_importance(label, features, csv_file):
     df = pd.read_csv(csv_file, encoding="latin1")
 
+    # Check and remove the columns with constant values
+    df = df.loc[:,df.apply(pd.Series.nunique) != 1]
+
+    # Get updated features after removing constant columns
+    features = [feat for feat in features if feat in df.columns]
+
     # Separate the features (X) from the target (y)
     X = df[features].astype(bool)  # Convert the features to boolean values
     y = df[label]
 
     # Calculate the F-value and p-value for each feature using ANOVA
-    f_values, p_values = f_classif(X, y)
+    with warnings.catch_warnings():  # Ignore the warnings
+        warnings.filterwarnings('ignore')
+        try:
+            f_values, p_values = f_classif(X, y)
+        except ValueError:  # Constant features produce ValueError in f_classif
+            return None
 
     # Create a DataFrame of the results
     importance_df = pd.DataFrame({"Feature": X.columns, "F-value": f_values, "p-value": p_values})
@@ -62,4 +73,4 @@ if __name__ == "__main__":
         features = pd.read_csv(csv_file, encoding="latin1").columns[1:].tolist()
 
         # Save the features data to a new csv file
-        save_features_data(label, features, csv_file, csv_file.name, 7)
+        save_features_data(label, features, csv_file, csv_file.name, 8)
