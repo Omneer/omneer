@@ -13,7 +13,7 @@ from sklearn.decomposition import KernelPCA
 from sklearn.linear_model import Lasso
 import os
 
-class Data(torch.utils.data.Dataset):
+class Data(torch.data.Dataset):
     def __init__(self, label, features, csv_dir):
         self.features = features
         self.label = label
