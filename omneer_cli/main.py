@@ -73,7 +73,7 @@ def intro_command():
     console.print(logo, style="#2f74d4")
 
 
-@app.command(name="help", help="Show the list of available commands")
+@app.command(name="options", help="Show the list of available commands")
 def help_command():
     """Display a list of available commands."""
     commands = app.registered_commands
