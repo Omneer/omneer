@@ -10,10 +10,10 @@ from omneer.processing.misc import get_metrics, get_calibration_curve, pr_auc_sc
 from omneer.model.train import train
 from omneer.processing.bootstrap import bootstrap
 from omneer.visualization.plot import plot_roc, plot_pr
+from omneer.processing.preprocess.features import select_top_features
 from sklearn.metrics import confusion_matrix
 
-
-def main(csvfile, model_name):
+def main(csvfile, model_name, num_features):
     assert model_name in ['mlp', 'xgb', 'rf', 'lr', 'svm', 'lda', 'ensemble']
 
     # Directory to save results
@@ -31,9 +31,13 @@ def main(csvfile, model_name):
     # Initialize dataset
     csv_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'raw', csvfile)
     df = pd.read_csv(csv_path, encoding='latin1')
+
+    # Use the select_top_features function to get the selected features
+    selected_features = select_top_features("PD", df.columns[1:], csv_path, num_features)
+
     whole_data = Data(
         label='PD',
-        features=df.iloc[:, 1:],
+        features=selected_features,
         csv_dir=csv_path,
     )
 
@@ -80,9 +84,10 @@ def cli():
     parser = argparse.ArgumentParser(description='Omneer command line interface.')
     parser.add_argument('csvfile', help='CSV file to process.')
     parser.add_argument('model', help='Model to use for data processing.')
+    parser.add_argument('num_features', type=int, help='Number of features to use.')
     args = parser.parse_args()
 
-    main(args.csvfile, args.model)
+    main(args.csvfile, args.model, args.num_features)
 
 if __name__ == "__main__":
     cli()
