@@ -29,11 +29,12 @@ def main(csvfile, model_name):
     os.makedirs(save_dir + '/results', exist_ok=True)
 
     # Initialize dataset
-    df = pd.read_csv(csvfile, encoding='latin1')
+    csv_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'raw', csvfile)
+    df = pd.read_csv(csv_path, encoding='latin1')
     whole_data = Data(
         label='PD',
         features=df.iloc[:, 1:],
-        csv_dir=csvfile,
+        csv_dir=csv_path,
     )
 
     # For random data split
@@ -74,7 +75,6 @@ def main(csvfile, model_name):
     fig = plt.figure(figsize=(6, 6), dpi=100)
     plot_pr(plt.gca(), y_true_all, scores_all)
     fig.savefig('{}/PR {}.png'.format(save_dir, model_name), dpi=300)
-
 
 def cli():
     parser = argparse.ArgumentParser(description='Omneer command line interface.')

@@ -239,7 +239,7 @@ def main():
             #create_violinplot(df_melt)
 
             # Create t-SNE plot
-            #create_tsne(df)
+            create_tsne(df)
 
             # Calculate feature importance
             importance_df = calculate_feature_importance(df)

@@ -13,28 +13,15 @@ from sklearn.decomposition import KernelPCA
 from sklearn.linear_model import Lasso
 import os
 
-
 class Data(torch.utils.data.Dataset):
-
     def __init__(self, label, features, csv_dir):
-
         self.features = features
         self.label = label
         content = self.read_csv(csv_dir)
         self.content = self.filter_incomplete_cases(content)
-        self.x = [[row[k] for k in self.features] for row in self.content]
-        self.y = [row[self.label] for row in self.content]
-        self.x = np.array(self.x, dtype = np.float32)
-        self.y = np.array(self.y, dtype = np.float32)
-        self.x = self.impute_missing_values(self.x)
-        #self.x = self.polynomial_features(self.x)
-        #self.x = self.lasso_feature_selection(self.x, self.y)
-        self.x = self.normalize_features(self.x)
-        #self.x = self.pls_da_transform(self.x)
-
+        self.x, self.y = self.process_data()
 
     def read_csv(self, csv_file):
-
         content = []
         with open(csv_file, 'r') as csvfile:
             reader = csv.DictReader(csvfile)
@@ -42,34 +29,52 @@ class Data(torch.utils.data.Dataset):
                 content.append(row)
         return content
 
-    
     def filter_incomplete_cases(self, content):
-        
+        # Identify empty columns
+        empty_columns = []
+        for key in self.features:
+            column_values = [row.get(key, '') for row in content]
+            if all(value == '' for value in column_values):
+                empty_columns.append(key)
+
+        # Remove empty columns
+        self.features = [key for key in self.features if key not in empty_columns]
+
+        # Remove rows with empty values in any remaining features or label
         filtered_content = []
         for row in content:
-            complete = True
-            for key in self.features:
-                if row[key] == '':
-                    complete = False
-            if complete and row[self.label] != '':
-                filtered_content.append(row)
+            if all(row.get(key, '') != '' for key in self.features) and row.get(self.label, '') != '':
+                filtered_row = {key: row[key] for key in self.features}
+                filtered_row[self.label] = row[self.label]
+                filtered_content.append(filtered_row)
+
         return filtered_content
 
 
-    def __len__(self):
+    def process_data(self):
+        x = []
+        y = []
+        for row in self.content:
+            x_row = []
+            for key in self.features:
+                x_row.append(float(row[key]))
+            x.append(x_row)
+            y.append(float(row[self.label]))
+        x = np.array(x, dtype=np.float32)
+        y = np.array(y, dtype=np.float32)
+        x = self.impute_missing_values(x)
+        x = self.normalize_features(x)
+        return x, y
 
+    def __len__(self):
         return len(self.content)
 
-
     def __getitem__(self, idx):
-
         return self.x[idx], self.y[idx]
 
-
     def input_length(self):
+        return len(self.features)
 
-        return len(self.__getitem__(0)[0])
-    
     @property
     def all(self):
         
@@ -99,8 +104,8 @@ class Data(torch.utils.data.Dataset):
     def save_preprocessed_data(self, file_name):
         # Prepare a DataFrame
         df = pd.DataFrame(self.x)
-        df.columns = self.features
-        df[self.label] = self.y
+        df.insert(0, self.label, self.y)
+        df.columns = [self.label] + self.features
 
         # Extract the file name without the extension
         file_name_without_extension = os.path.splitext(file_name)[0]
@@ -117,6 +122,7 @@ class Data(torch.utils.data.Dataset):
         # Save the DataFrame to a csv file
         output_path = os.path.join(output_dir, processed_file_name)
         df.to_csv(output_path, index=False)
+
 
 if __name__ == "__main__":
     csv_dir = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'data/raw')
