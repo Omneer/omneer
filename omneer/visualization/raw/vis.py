@@ -124,7 +124,6 @@ def create_3d_scatters(df):
         ax.set_title(f'3D Scatter Plot: {col} vs PD')
 
     plt.tight_layout()
-    plt.show()
 
 def create_tsne(df):
     X = df.iloc[:, 1:].values
@@ -136,7 +135,7 @@ def create_tsne(df):
     X_2d = tsne.fit_transform(X)
     
     # Apply a clustering algorithm on the reduced data
-    kmeans = KMeans(n_clusters=2, random_state=0).fit(X_2d)
+    kmeans = KMeans(n_clusters=2, random_state=0, n_init=10).fit(X_2d)  # Set n_init explicitly
     
     # Create a new dataframe for plot
     df_tsne = pd.DataFrame(X_2d, columns=['Component 1', 'Component 2'])
@@ -156,6 +155,10 @@ def create_tsne(df):
     plt.legend()
     plt.title('2D t-SNE')
     plt.savefig(os.path.join(output_dir, 'tsne.png'))
+
+def create_pairplot(df):
+    sns.pairplot(df, hue='PD')
+    plt.savefig(os.path.join(output_dir, 'pairplot.png'))
 
 def create_dendrogram(df):
     linked = linkage(df.iloc[:, 1:], method='ward')
@@ -182,6 +185,9 @@ def main():
 
             # Create boxplot
             create_boxplot(df_melt)
+
+            # Create pairplot
+            create_pairplot(df)
 
             # Calculate correlations
             corr = calculate_correlations(df)
