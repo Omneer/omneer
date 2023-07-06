@@ -2,8 +2,8 @@ from setuptools import setup, find_packages
 
 setup(
     name='omneer',
-    version='0.13',
-    packages=find_packages(include=['omneer', 'omneer.*']),
+    version='0.15',
+    packages=find_packages(),
     url='http://docs.omneer.xyz',
     license='MIT',
     author='William Blair',
@@ -33,7 +33,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'omneer=omneer_cli.main:app',  # Replace with the correct module and function name
+            'omneer=omneer_cli.main:main',  # Replace with the correct module and function name
         ],
     },
         classifiers=[

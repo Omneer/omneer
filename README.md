@@ -31,7 +31,7 @@ See the SDK in action by following the steps below to register your first workfl
 First, install omneer through `pip`.
 
 ```
-$ python3 pip install omneer
+$ pip install omneer
 ```
 
 Then, create some boilerplate code for your new workflow.

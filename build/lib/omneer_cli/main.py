@@ -33,7 +33,7 @@ tips = [
 
 @main.command(name="start")
 def intro_command():
-    """Display the introduction to Omneer SDK."""
+    """Display the introduction message with an exciting loading animation."""
     welcome_message = f"""
 {CYAN}
 ╭─────────────────────────────────────────────────────╮

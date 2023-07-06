@@ -1,2 +1,3 @@
 [console_scripts]
-omneer = omneer_cli.main:app
+omneer = omneer_cli.main:main
+

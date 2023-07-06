@@ -30,3 +30,5 @@ omneer/visualization/graph/shap_2_average.py
 omneer/visualization/graph/shap_3_correlation.py
 omneer/visualization/graph/shap_4_summary.py
 omneer/visualization/graph/shap_analysis__.py
+omneer_cli/__init__.py
+omneer_cli/main.py
