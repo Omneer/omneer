@@ -3,6 +3,7 @@ import time
 import os
 from rich.console import Console
 from rich.progress import Progress, TaskID
+import subprocess
 
 app = typer.Typer(
     name="omneer",
@@ -88,17 +89,16 @@ def help_command():
     
     typer.echo(f"Available Commands:\n{command_list}")
 
+
 @app.command(name="predict", help="Run prediction on a CSV file using a specific model")
 def predict_command(csvfile: str, model_name: str, num_features: int = typer.Argument(None)):
     """Run the prediction on a CSV file using a specific model."""
-
-    if not os.path.isfile("main.py"):
+    main_script = os.path.join(os.path.dirname(__file__), "..", "omneer", "processing", "main.py")
+    if not os.path.isfile(main_script):
         typer.echo("main.py file not found")
         raise typer.Exit(code=1)
 
-    import subprocess
-
-    args = ["python", "main.py", csvfile, model_name]
+    args = ["python", main_script, csvfile, model_name]
 
     if num_features:
         args.append(str(num_features))

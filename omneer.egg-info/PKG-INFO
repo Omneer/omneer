@@ -6,6 +6,9 @@ Home-page: http://docs.omneer.xyz
 Author: William Blair
 Author-email: william.blair0708@gmail.com
 License: MIT
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
 Description-Content-Type: text/markdown
 
 <div align="center">
