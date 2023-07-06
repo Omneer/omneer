@@ -1,5 +1,6 @@
 import typer
 import time
+import os
 from rich.console import Console
 from rich.progress import Progress, TaskID
 
@@ -15,6 +16,12 @@ progress = Progress(console=console)
 CYAN = "[bold cyan]"
 
 version_info = "Omneer SDK CLI v1.12.0"  # Update with the appropriate version information
+
+disclaimer = """
+© 2023 Omneer Corporation. All rights reserved.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+"""
 
 # Define the tips/help text
 tips = [
@@ -32,10 +39,10 @@ def intro_command():
 │                [b]Welcome to Omneer SDK![/b]               │
 │    Personalized Medicine AI SDK for Neuroscience    │
 ╰─────────────────────────────────────────────────────╯
-
 """
     console.print(welcome_message, style="bold", justify="center")
     console.print(version_info, style="bold", justify="center")
+    console.print(disclaimer, style="bold", justify="center")
 
     with console.status("[bold green]Loading...[/bold green]", spinner="arrow3") as status:
         task1: TaskID = progress.add_task("[bold cyan]Task 1[/bold cyan]", total=100)
@@ -54,7 +61,7 @@ def intro_command():
                 progress.update(task4, completed=progress.tasks[task4].completed + 1)
 
     time.sleep(1)
-    console.clear()
+    os.system('cls' if os.name == 'nt' else 'clear')
 
     logo = """
   ██████╗ ███╗   ███╗███╗   ██╗███████╗███████╗██████╗ 
@@ -80,6 +87,23 @@ def help_command():
     command_list = "\n".join([command.name for command in commands])
     
     typer.echo(f"Available Commands:\n{command_list}")
+
+@app.command(name="predict", help="Run prediction on a CSV file using a specific model")
+def predict_command(csvfile: str, model_name: str, num_features: int = typer.Argument(None)):
+    """Run the prediction on a CSV file using a specific model."""
+
+    if not os.path.isfile("main.py"):
+        typer.echo("main.py file not found")
+        raise typer.Exit(code=1)
+
+    import subprocess
+
+    args = ["python", "main.py", csvfile, model_name]
+
+    if num_features:
+        args.append(str(num_features))
+
+    subprocess.run(args)
 
 
 if __name__ == "__main__":

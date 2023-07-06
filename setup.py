@@ -36,4 +36,9 @@ setup(
             'omneer=omneer_cli.main:app',  # Replace with the correct module and function name
         ],
     },
-)
+        classifiers=[
+            "Programming Language :: Python :: 3.8",
+            "Programming Language :: Python :: 3.9",
+            "Programming Language :: Python :: 3.10",
+        ],
+    )
