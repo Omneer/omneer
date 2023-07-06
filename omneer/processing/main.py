@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import os
 import shutil
 import sys
 import argparse
@@ -12,24 +11,25 @@ from omneer.processing.bootstrap import bootstrap
 from omneer.visualization.plot import plot_roc, plot_pr
 from omneer.processing.preprocess.features import select_top_features
 from sklearn.metrics import confusion_matrix
+from pathlib import Path
 
 def main(csvfile, model_name, num_features=None):
     assert model_name in ['mlp', 'xgb', 'rf', 'lr', 'svm', 'lda', 'ensemble']
 
     # Directory to save results
-    comb_dir = './test'
-    dset_dir = os.path.splitext(os.path.basename(csvfile))[0]
+    comb_dir = Path('./test')
+    dset_dir = Path(csvfile).stem
     mode_dir = model_name
-    save_dir = '{}/{}/{}'.format(comb_dir, dset_dir, mode_dir)
+    save_dir = comb_dir / dset_dir / mode_dir
 
     # Clean up the result folder
     shutil.rmtree(save_dir, ignore_errors=True)
-    os.makedirs(save_dir, exist_ok=True)
-    os.makedirs(save_dir + '/checkpoints', exist_ok=True)
-    os.makedirs(save_dir + '/results', exist_ok=True)
+    save_dir.mkdir(parents=True, exist_ok=True)
+    (save_dir / 'checkpoints').mkdir(exist_ok=True)
+    (save_dir / 'results').mkdir(exist_ok=True)
 
     # Initialize dataset
-    csv_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'raw', csvfile)
+    csv_path = Path(__file__).resolve().parent.parent.joinpath('data', 'raw', csvfile)
     df = pd.read_csv(csv_path, encoding='latin1')
 
     if num_features:
@@ -51,15 +51,15 @@ def main(csvfile, model_name, num_features=None):
     # Run for multiple times to collect the statistics of the performance metrics
     bootstrap(
         func=train,
-        args=(model_name, whole_data, train_size, valid_size, save_dir),
+        args=(model_name, whole_data, train_size, valid_size, str(save_dir)),
         kwargs={},
         num_runs=100,
         num_jobs=1,
     )
 
     # Calculate and show the mean & std of the metrics for all runs
-    list_csv = os.listdir(save_dir + '/results')
-    list_csv = ['{}/results/{}'.format(save_dir, fn) for fn in list_csv]
+    list_csv = (save_dir / 'results').glob('*')
+    list_csv = [save_dir / 'results' / Path(fn).name for fn in list_csv]
 
     y_true_all, y_pred_all, scores_all = [], [], []
     for fn in list_csv:
@@ -77,11 +77,11 @@ def main(csvfile, model_name, num_features=None):
     # Plot ROC, PR curves
     fig = plt.figure(figsize=(6, 6), dpi=100)
     plot_roc(plt.gca(), y_true_all, scores_all)
-    fig.savefig('{}/ROC {}.png'.format(save_dir, model_name), dpi=300)
+    fig.savefig(save_dir / f'ROC {model_name}.png', dpi=300)
 
     fig = plt.figure(figsize=(6, 6), dpi=100)
     plot_pr(plt.gca(), y_true_all, scores_all)
-    fig.savefig('{}/PR {}.png'.format(save_dir, model_name), dpi=300)
+    fig.savefig(save_dir / f'PR {model_name}.png', dpi=300)
 
 def cli():
     parser = argparse.ArgumentParser(description='Omneer command line interface.')
