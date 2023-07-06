@@ -10,9 +10,7 @@ from sklearn.svm import SVC, LinearSVC
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.preprocessing import StandardScaler
 import joblib
-from pytorch_tabnet.tab_model import TabNetClassifier
 from sklearn.ensemble import VotingClassifier
-from lightgbm import LGBMClassifier
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.ensemble import StackingClassifier
 from sklearn.ensemble import GradientBoostingClassifier

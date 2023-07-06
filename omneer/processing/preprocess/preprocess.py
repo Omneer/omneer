@@ -32,8 +32,6 @@ class Data(torch.utils.data.Dataset):
         self.x = self.normalize_features(self.x)
         #self.x = self.pls_da_transform(self.x)
 
-        self.save_preprocessed_data('Preprocessed_Final.csv')
-
 
     def read_csv(self, csv_file):
 
