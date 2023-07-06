@@ -6,7 +6,7 @@ from sklearn.base import BaseEstimator
 from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
 from sklearn.utils.multiclass import unique_labels
 from sklearn.base import BaseEstimator, ClassifierMixin
-from omneer.data.preprocessing.preprocess import Data
+from omneer.processing.preprocess.preprocess import Data
 
 __all__ = ['MLPClassifier']
 

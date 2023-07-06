@@ -6,7 +6,7 @@ import argparse
 import matplotlib.pyplot as plt
 import pandas as pd
 from scipy import stats
-from omneer.data.preprocessing.preprocess import Data
+from omneer.processing.preprocess.preprocess import Data
 from omneer.processing.misc import get_metrics, get_calibration_curve, pr_auc_score, compute_ci
 from omneer.model.train import train
 from omneer.processing.bootstrap import bootstrap
