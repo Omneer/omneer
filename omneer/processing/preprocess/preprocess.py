@@ -11,6 +11,8 @@ from sklearn.cross_decomposition import PLSRegression
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.decomposition import KernelPCA
 from sklearn.linear_model import Lasso
+import os
+
 
 class Data(torch.utils.data.Dataset):
 
@@ -102,25 +104,34 @@ class Data(torch.utils.data.Dataset):
         df.columns = self.features
         df[self.label] = self.y
 
+        # Set the directory path for saving the preprocessed file
+        output_dir = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'data/preprocessing')
+
+        # Create the directory if it does not exist
+        os.makedirs(output_dir, exist_ok=True)
+
         # Save the DataFrame to a csv file
-        df.to_csv(file_name, index=False)
+        output_path = os.path.join(output_dir, file_name)
+        df.to_csv(output_path, index=False)
 
 
 if __name__ == "__main__":
-    
-    import pandas as pd
+    csv_dir = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'data/raw')
+    for file_name in os.listdir(csv_dir):
+        if file_name.endswith('.csv'):
+            csv_file = os.path.join(csv_dir, file_name)
 
-    df = pd.read_csv('Final.csv', encoding='latin1')
+            df = pd.read_csv(csv_file, encoding='latin1')
 
-    # The name of the column in your csv file that contains the labels
-    label = 'PD'
+            # The name of the column in your csv file that contains the labels
+            label = 'PD'
 
-    # The names of the columns in your csv file that contain the features
-    features = df.columns[1:].tolist()
+            # The names of the columns in your csv file that contain the features
+            features = df.columns[1:].tolist()
 
-    # Initialize the Data object
-    data = Data(
-        label = label,
-        features = features,
-        csv_dir = 'Final.csv',
-    )
+            # Initialize the Data object
+            data = Data(
+                label=label,
+                features=features,
+                csv_dir=csv_file,
+            )
