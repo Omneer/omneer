@@ -9,6 +9,7 @@ from scipy.cluster.hierarchy import dendrogram, linkage
 from mpl_toolkits.mplot3d import Axes3D
 from sklearn.cluster import KMeans
 import os
+from sklearn.feature_selection import f_classif
 
 # Specify the output directory for saving figures
 output_dir = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'visualization/raw')
@@ -166,6 +167,39 @@ def create_dendrogram(df):
     plt.figure(figsize=(10, 7))
     dendrogram(linked, orientation='top', labels=list(df.index), distance_sort='descending', show_leaf_counts=True)
 
+def calculate_feature_importance(df):
+    # Separate the features (X) from the target (y)
+    X = df.iloc[:, 1:]
+    y = df['PD']
+
+    # Calculate the F-value and p-value for each feature using ANOVA
+    f_values, p_values = f_classif(X, y)
+    
+    # Create a DataFrame of the results
+    importance_df = pd.DataFrame({
+        'Feature': X.columns,
+        'F-value': f_values,
+        'p-value': p_values
+    })
+
+    # Sort the DataFrame by the F-value in descending order
+    importance_df.sort_values('F-value', ascending=False, inplace=True)
+    
+    return importance_df
+
+def plot_feature_importance(importance_df):
+    # Select the top 20 features
+    top_20_features = importance_df.head(20)
+    
+    # Create a bar plot of the F-values for the top 20 features
+    plt.figure(figsize=(10, 10))  # Increase the plot size to accommodate more features
+    sns.barplot(x='F-value', y='Feature', data=top_20_features)
+    plt.title('Top 20 Feature Importance Ranking Based on Variance')  # Update the plot title
+    plt.xlabel('F-value (Variance)')
+    plt.ylabel('Feature')
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_dir, 'feature_importance.png'))
+
 
 def main():
     # Specify the directory path where the CSV files are stored
@@ -184,28 +218,35 @@ def main():
             df_melt = transform_data(df)
 
             # Create boxplot
-            create_boxplot(df_melt)
+            #create_boxplot(df_melt)
 
             # Create pairplot
-            create_pairplot(df)
+            #create_pairplot(df)
 
             # Calculate correlations
             corr = calculate_correlations(df)
 
             # Create heatmap
-            create_heatmap(corr)
+            #create_heatmap(corr)
 
             # Determine the grid for subplots
             num_rows, num_cols = determine_grid(df)
 
             # Create histograms
-            create_histograms(df, num_rows, num_cols)
+            #create_histograms(df, num_rows, num_cols)
 
             # Create violin plot
-            create_violinplot(df_melt)
+            #create_violinplot(df_melt)
 
             # Create t-SNE plot
-            create_tsne(df)
+            #create_tsne(df)
+
+            # Calculate feature importance
+            importance_df = calculate_feature_importance(df)
+            
+            # Plot feature importance
+            plot_feature_importance(importance_df)
+
 
 # Run the main function
 if __name__ == "__main__":
