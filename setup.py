@@ -4,7 +4,7 @@ setup(
     name='omneer',
     version='0.12',
     packages=find_packages(include=['omneer', 'omneer.*']),
-    url='http://omneer.xyz',
+    url='http://docs.omneer.xyz',
     license='MIT',
     author='William Blair',
     author_email='william.blair0708@gmail.com',
@@ -26,10 +26,14 @@ setup(
         'tqdm>=4.62.0',
         'xgboost>=1.4.0',
         'joblib>=1.0.0',
+        'click>=8.0.1',
+        'typer>=0.3.2',
+        'halo>=0.0.31',
+        'rich>=10.6.0',
     ],
     entry_points={
-    'console_scripts': [
-        'omneer=omneer.lc.main:cli',
+        'console_scripts': [
+            'omneer=omneer_cli.main:app',  # Replace with the correct module and function name
         ],
     },
 )

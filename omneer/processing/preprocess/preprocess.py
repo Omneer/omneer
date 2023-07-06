@@ -102,6 +102,12 @@ class Data(torch.utils.data.Dataset):
         df.columns = self.features
         df[self.label] = self.y
 
+        # Extract the file name without the extension
+        file_name_without_extension = os.path.splitext(file_name)[0]
+
+        # Append "_processed" to the file name
+        processed_file_name = f"{file_name_without_extension}_Preprocessed.csv"
+
         # Set the directory path for saving the preprocessed file
         output_dir = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'data/preprocessing')
 
@@ -109,9 +115,8 @@ class Data(torch.utils.data.Dataset):
         os.makedirs(output_dir, exist_ok=True)
 
         # Save the DataFrame to a csv file
-        output_path = os.path.join(output_dir, file_name)
+        output_path = os.path.join(output_dir, processed_file_name)
         df.to_csv(output_path, index=False)
-
 
 if __name__ == "__main__":
     csv_dir = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'data/raw')
@@ -133,3 +138,6 @@ if __name__ == "__main__":
                 features=features,
                 csv_dir=csv_file,
             )
+
+            # Save the preprocessed data to a new csv file
+            data.save_preprocessed_data(file_name)

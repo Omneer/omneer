@@ -1,2 +1,2 @@
 [console_scripts]
-omneer = omneer.lc.main:cli
+omneer = omneer_cli.main:app
