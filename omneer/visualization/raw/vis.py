@@ -8,6 +8,10 @@ from sklearn.manifold import TSNE
 from scipy.cluster.hierarchy import dendrogram, linkage
 from mpl_toolkits.mplot3d import Axes3D
 from sklearn.cluster import KMeans
+import os
+
+# Specify the output directory for saving figures
+output_dir = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'visualization/raw')
 
 def load_and_preprocess_data(file_name):
     # Load the data
@@ -34,7 +38,7 @@ def create_boxplot(df_melt):
     sns.boxplot(x='Metabolite', y='Concentration', hue='PD', data=df_melt)
     plt.xticks(rotation=90)
     plt.title('Distribution of Metabolites Concentration')
-    plt.show()
+    plt.savefig(os.path.join(output_dir, 'boxplot.png'))
 
 def calculate_correlations(df):
     # Calculate correlations
@@ -47,7 +51,7 @@ def create_heatmap(corr):
     plt.figure(figsize=(10, 8))
     sns.heatmap(corr, annot=True, fmt=".2f", cmap='coolwarm')
     plt.title('Correlation between Metabolites')
-    plt.show()
+    plt.savefig(os.path.join(output_dir, 'heatmap.png'))
 
 def determine_grid(df, num_cols=2):
     # Determine the number of rows and columns for the subplots
@@ -73,7 +77,7 @@ def create_histograms(df, num_rows, num_cols):
         axes[-1].remove()
 
     plt.tight_layout()
-    plt.show()
+    plt.savefig(os.path.join(output_dir, 'histograms.png'))
 
 def detect_outliers(df):
     # Use the IQR method to detect and report outliers for each column
@@ -93,7 +97,6 @@ def create_kdeplot(df):
         plt.figure(figsize=(10, 5))
         sns.kdeplot(data=df, x=column, hue='PD', fill=True)
         plt.title(f'KDE Plot for {column}')
-        plt.show()
 
 def create_violinplot(df_melt):
     # Create a violin plot
@@ -101,7 +104,7 @@ def create_violinplot(df_melt):
     sns.violinplot(x='Metabolite', y='Concentration', hue='PD', data=df_melt, split=True)
     plt.xticks(rotation=90)
     plt.title('Distribution of Metabolites Concentration')
-    plt.show()
+    plt.savefig(os.path.join(output_dir, 'violinplot.png'))
 
 def create_interactive_scatters(df):
     for col in df.columns[1:]:
@@ -152,45 +155,51 @@ def create_tsne(df):
     plt.ylabel('Component 2')
     plt.legend()
     plt.title('2D t-SNE')
-    plt.show()
+    plt.savefig(os.path.join(output_dir, 'tsne.png'))
 
 def create_dendrogram(df):
     linked = linkage(df.iloc[:, 1:], method='ward')
 
     plt.figure(figsize=(10, 7))
     dendrogram(linked, orientation='top', labels=list(df.index), distance_sort='descending', show_leaf_counts=True)
-    plt.show()
 
 
 def main():
-    # Specify the name of the csv file
-    file_name = 'Final.csv'
+    # Specify the directory path where the CSV files are stored
+    csv_dir = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'data/raw')
     
-    # Load and preprocess data
-    df = load_and_preprocess_data(file_name)
-    
-    # Transform data
-    df_melt = transform_data(df)
-    
-    # Create boxplot
-    create_boxplot(df_melt)
-    
-    # Calculate correlations
-    corr = calculate_correlations(df)
-    
-    # Create heatmap
-    create_heatmap(corr)
-    
-    # Determine the grid for subplots
-    num_rows, num_cols = determine_grid(df)
-    
-    # Create histograms
-    create_histograms(df, num_rows, num_cols)
+    # Iterate over the files in the directory
+    for file_name in os.listdir(csv_dir):
+        if file_name.endswith('.csv'):
+            # Construct the file path
+            file_path = os.path.join(csv_dir, file_name)
 
-    #Create violin plot
-    create_violinplot(df_melt)
+            # Load and preprocess data
+            df = load_and_preprocess_data(file_path)
 
-    create_tsne(df)
+            # Transform data
+            df_melt = transform_data(df)
+
+            # Create boxplot
+            create_boxplot(df_melt)
+
+            # Calculate correlations
+            corr = calculate_correlations(df)
+
+            # Create heatmap
+            create_heatmap(corr)
+
+            # Determine the grid for subplots
+            num_rows, num_cols = determine_grid(df)
+
+            # Create histograms
+            create_histograms(df, num_rows, num_cols)
+
+            # Create violin plot
+            create_violinplot(df_melt)
+
+            # Create t-SNE plot
+            create_tsne(df)
 
 # Run the main function
 if __name__ == "__main__":
