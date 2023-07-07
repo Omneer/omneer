@@ -84,8 +84,8 @@ def intro_command():
 @main.command(name="options", help="Show the list of available commands")
 def help_command():
     """Display a list of available commands."""
-    commands = app.registered_commands
-    command_list = "\n".join([command.name for command in commands])
+    commands = main.registered_commands
+    command_list = "\n".join([command.name for command in commands if command.name is not None])
     
     typer.echo(f"Available Commands:\n{command_list}")
 
