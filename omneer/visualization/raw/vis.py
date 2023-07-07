@@ -21,6 +21,8 @@ def load_and_preprocess_data(file_name):
     # Rename the first column as 'PD'
     df.rename(columns={0: 'PD'}, inplace=True)
 
+    df.iloc[:, 1:] = df.iloc[:, 1:].fillna(0)
+
     # Standardize the data (optional)
     scaler = StandardScaler()
     df.iloc[:, 1:] = scaler.fit_transform(df.iloc[:, 1:])
@@ -218,28 +220,28 @@ def main():
             df_melt = transform_data(df)
 
             # Create boxplot
-            create_boxplot(df_melt)
+            #create_boxplot(df_melt)
 
             # Create pairplot
-            create_pairplot(df)
+            #create_pairplot(df)
 
             # Calculate correlations
             corr = calculate_correlations(df)
 
             # Create heatmap
-            create_heatmap(corr)
+            #create_heatmap(corr)
 
             # Determine the grid for subplots
             num_rows, num_cols = determine_grid(df)
 
             # Create histograms
-            create_histograms(df, num_rows, num_cols)
+            #create_histograms(df, num_rows, num_cols)
 
             # Create violin plot
-            create_violinplot(df_melt)
+            #create_violinplot(df_melt)
 
             # Create t-SNE plot
-            create_tsne(df)
+            #create_tsne(df)
 
             # Calculate feature importance
             importance_df = calculate_feature_importance(df)

@@ -4,11 +4,11 @@ import sys
 import argparse
 import matplotlib.pyplot as plt
 import pandas as pd
-from omneer.processing.preprocess.preprocess import Data
 from omneer.processing.misc import get_metrics, get_calibration_curve, pr_auc_score, compute_ci
 from omneer.model.train import train
 from omneer.processing.bootstrap import bootstrap
 from omneer.visualization.plot import plot_roc, plot_pr
+from omneer.processing.preprocess.preprocess import Data
 from omneer.processing.preprocess.features import select_top_features
 from sklearn.metrics import confusion_matrix
 from pathlib import Path
@@ -36,7 +36,7 @@ def main(csvfile, model_name, num_features=None):
         # Use the select_top_features function to get the selected features
         selected_features = select_top_features("PD", df.columns[1:], csv_path, num_features)
     else:
-        selected_features = df.iloc[:, 1:]  # Use all features
+        selected_features = df.iloc[:, 2:]  # Use all features
 
     whole_data = Data(
         label='PD',

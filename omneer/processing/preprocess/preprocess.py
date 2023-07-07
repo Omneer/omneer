@@ -132,11 +132,13 @@ if __name__ == "__main__":
 
             df = pd.read_csv(csv_file, encoding='latin1')
 
+            patient = 'Patient'
+
             # The name of the column in your csv file that contains the labels
             label = 'PD'
 
             # The names of the columns in your csv file that contain the features
-            features = df.columns[1:].tolist()
+            features = df.columns[2:].tolist()
 
             # Initialize the Data object
             data = Data(

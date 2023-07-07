@@ -1,46 +1,65 @@
 import pandas as pd
-from sklearn.feature_selection import f_classif
+from xgboost import XGBClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
 from pathlib import Path
+from sklearn.preprocessing import StandardScaler
 import warnings
+from sklearn.feature_selection import f_classif
 
-def calculate_feature_importance(label, features, csv_file):
-    df = pd.read_csv(csv_file, encoding="latin1")
 
-    # Check and remove the columns with constant values
-    df = df.loc[:,df.apply(pd.Series.nunique) != 1]
+def load_and_preprocess_data(file_name):
+    # Load the data
+    df = pd.read_csv(file_name, header=0)
 
-    # Get updated features after removing constant columns
-    features = [feat for feat in features if feat in df.columns]
+    # Rename the first column as 'PD'
+    df.rename(columns={df.columns[0]: 'PD'}, inplace=True)
 
-    # Separate the features (X) from the target (y)
-    X = df[features].astype(bool)  # Convert the features to boolean values
-    y = df[label]
+    df.iloc[:, 1:] = df.iloc[:, 1:].fillna(0)
 
+    # Standardize the data (optional)
+    scaler = StandardScaler()
+    df.iloc[:, 1:] = scaler.fit_transform(df.iloc[:, 1:])
+    
+    return df
+
+def transform_data(df):
+    # Transform the data from wide to long form suitable for boxplot
+    df_melt = pd.melt(df, id_vars='PD', var_name='Metabolite', value_name='Concentration')
+    
+    return df_melt
+
+def calculate_feature_importance(X, y):
     # Calculate the F-value and p-value for each feature using ANOVA
-    with warnings.catch_warnings():  # Ignore the warnings
-        warnings.filterwarnings('ignore')
-        try:
-            f_values, p_values = f_classif(X, y)
-        except ValueError:  # Constant features produce ValueError in f_classif
-            return None
-
+    f_values, p_values = f_classif(X, y)
+    
     # Create a DataFrame of the results
-    importance_df = pd.DataFrame({"Feature": X.columns, "F-value": f_values, "p-value": p_values})
+    importance_df = pd.DataFrame({
+        'Feature': X.columns,
+        'F-value': f_values,
+        'p-value': p_values
+    })
 
     # Sort the DataFrame by the F-value in descending order
-    importance_df.sort_values("F-value", ascending=False, inplace=True)
-
+    importance_df.sort_values('F-value', ascending=False, inplace=True)
+    
     return importance_df
 
 def select_top_features(label, features, csv_file, n):
+    # Load the DataFrame from the CSV file
+    df = pd.read_csv(csv_file, encoding="latin1")
+
+    # Separate the features (X) from the target (y)
+    X = df[features]
+    y = df[label]
+
     # Call the calculate_feature_importance function
-    importance_df = calculate_feature_importance(label, features, csv_file)
+    importance_df = calculate_feature_importance(X, y)
 
     # Get the top n features
     top_n_features = importance_df.head(n)
 
     # Select only the top n features from the original DataFrame
-    df = pd.read_csv(csv_file, encoding="latin1")
     selected_features = df[top_n_features["Feature"]]
 
     return selected_features
@@ -70,7 +89,8 @@ if __name__ == "__main__":
     csv_dir = Path.cwd().parent.parent / "data" / "raw"
     for csv_file in csv_dir.glob("*.csv"):
         label = "PD"
-        features = pd.read_csv(csv_file, encoding="latin1").columns[1:].tolist()
+        data = load_and_preprocess_data(csv_file)
+        features = data.columns[1:].tolist()
 
         # Save the features data to a new csv file
         save_features_data(label, features, csv_file, csv_file.name, 8)
