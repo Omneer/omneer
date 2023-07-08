@@ -13,13 +13,15 @@ if cur_ver < (3, 8) or cur_ver > (3, 10):
 
 setup(
     name='omneer',
-    version='0.16',
-    packages=find_packages(),
+    version='v0.1.0',
     url='http://docs.omneer.xyz',
     license='MIT',
     author='William Blair',
     author_email='william.blair0708@gmail.com',
-    description='Advanced personalized medicine diagnostics for neurodegenerative disorders',
+    description='Omneer SDK',
+    packages=find_packages(),
+    include_package_data=True,
+    python_requires=">=3.8,<3.11",
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
     install_requires=[
