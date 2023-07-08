@@ -9,4 +9,5 @@ omneer/build/*
 omneer/dist/*
 .vscode/*
 .DS_Store
+omneer/__init__.py
 
