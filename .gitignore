@@ -7,4 +7,5 @@ omneer/data/preprocessing/*
 __pycache__/
 omneer/build/*
 omneer/dist/*
+.vscode/*
 
