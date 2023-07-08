@@ -9,8 +9,11 @@ omneer.egg-info/requires.txt
 omneer.egg-info/top_level.txt
 omneer/data/__init__.py
 omneer/data/external/__init__.py
+omneer/data/features/__init__.py
 omneer/data/fusion/__init__.py
 omneer/data/preprocessing/__init__.py
+omneer/data/raw/__init__.py
+omneer/data/storage/__init__.py
 omneer/model/__init__.py
 omneer/model/train.py
 omneer/model/deeplearning/__init__.py
@@ -19,6 +22,9 @@ omneer/processing/__init__.py
 omneer/processing/bootstrap.py
 omneer/processing/main.py
 omneer/processing/misc.py
+omneer/processing/preprocess/__init__.py
+omneer/processing/preprocess/features.py
+omneer/processing/preprocess/preprocess.py
 omneer/visualization/__init__.py
 omneer/visualization/plot.py
 omneer/visualization/graph/__init__.py
@@ -30,5 +36,7 @@ omneer/visualization/graph/shap_2_average.py
 omneer/visualization/graph/shap_3_correlation.py
 omneer/visualization/graph/shap_4_summary.py
 omneer/visualization/graph/shap_analysis__.py
+omneer/visualization/raw/__init__.py
+omneer/visualization/raw/vis.py
 omneer_cli/__init__.py
 omneer_cli/main.py

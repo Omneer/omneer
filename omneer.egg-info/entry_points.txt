@@ -1,3 +1,2 @@
 [console_scripts]
 omneer = omneer_cli.main:main
-

@@ -12,6 +12,7 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.decomposition import KernelPCA
 from sklearn.linear_model import Lasso
 import os
+from tqdm import tqdm
 
 class Data(torch.utils.data.Dataset):
     def __init__(self, label, features, csv_dir):
@@ -77,16 +78,38 @@ class Data(torch.utils.data.Dataset):
 
     @property
     def all(self):
-        
         return self.x, self.y
     
     def impute_missing_values(self, x):
-        imputer = IterativeImputer(max_iter=10, random_state=0)
-        return imputer.fit_transform(x)
+        with tqdm(total=2, desc="Imputing missing values") as pbar:
+            pbar.set_postfix(stage="Iterative Imputer")
+            imputer = IterativeImputer(max_iter=10, random_state=0)
+
+            # Divide the iterative imputation process into smaller steps
+            num_steps = 10
+            num_rows = x.shape[0]
+            step_size = num_rows // num_steps
+
+            for i in range(num_steps):
+                start = i * step_size
+                end = (i + 1) * step_size
+                imputed_x = imputer.fit_transform(x[start:end])
+                x[start:end] = imputed_x
+                pbar.update(1 / num_steps)
+
+            pbar.set_postfix(stage="KNN Imputer")
+            knn_imputer = KNNImputer()
+            x = knn_imputer.fit_transform(x)
+            pbar.update(1)
+        return x
 
     def normalize_features(self, x):
-        qt = QuantileTransformer().fit(x)
-        return qt.transform(x)
+        with tqdm(total=1, desc="Normalizing features") as pbar:
+            pbar.set_postfix(stage="Quantile Transformer")
+            qt = QuantileTransformer()
+            x = qt.fit_transform(x)
+            pbar.update(1)
+        return x
     
     def pls_da_transform(self, x):
         pls_da = PLSRegression(n_components=10)

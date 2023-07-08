@@ -1,15 +1,16 @@
-
 #!/usr/bin/env python3
 
 # Standard library imports
 import argparse
 import shutil
 from pathlib import Path
+import time
 
 # Third-party imports
 import matplotlib.pyplot as plt
 import pandas as pd
 from sklearn.metrics import confusion_matrix
+from tqdm import tqdm
 
 # Local application imports
 from omneer.model.train import train
@@ -41,6 +42,9 @@ def main(csvfile, model_name, num_features=None):
     save_dir.mkdir(parents=True, exist_ok=True)
     (save_dir / 'checkpoints').mkdir(exist_ok=True)
     (save_dir / 'results').mkdir(exist_ok=True)
+
+    # Measure preprocessing time
+    preprocessing_start_time = time.time()
 
     # Initialize dataset
     raw_dir = Path(__file__).resolve().parent.parent / 'data' / 'raw'
@@ -75,7 +79,12 @@ def main(csvfile, model_name, num_features=None):
     # For random data split
     train_size = int(len(whole_data) * 0.6)
     valid_size = len(whole_data) - train_size
-        # Run for multiple times to collect the statistics of the performance metrics
+
+    preprocessing_end_time = time.time()
+    preprocessing_elapsed_time = preprocessing_end_time - preprocessing_start_time
+    print(f"Preprocessing completed in {preprocessing_elapsed_time:.2f} seconds.")
+
+    # Run for multiple times to collect the statistics of the performance metrics
     bootstrap(
         func=train,
         args=(model_name, whole_data, train_size, valid_size, str(save_dir)),
@@ -88,7 +97,7 @@ def main(csvfile, model_name, num_features=None):
     list_csv = list((save_dir / 'results').glob('*'))
 
     y_true_all, y_pred_all, scores_all = [], [], []
-    for fn in list_csv:
+    for fn in tqdm(list_csv, desc='Processing data', unit='file'):
         df = pd.read_csv(fn)
         y_true_all.append(df['Y Label'].to_numpy())
         y_pred_all.append(df['Y Predicted'].to_numpy())
@@ -123,7 +132,3 @@ def cli():
 
 if __name__ == "__main__":
     cli()
-
-
-    
-
