@@ -93,9 +93,9 @@ class Data(torch.utils.data.Dataset):
 
         # Create preprocessing pipeline
         preprocessing_steps = [('imputer', CustomImputer(method=self.impute_method))]
-        if self.scale_method == 'quantile':
+        if self.scale_method == 'imputer':
             preprocessing_steps.append(('scaler', QuantileTransformer()))
-        elif self.scale_method == 'standard':
+        elif self.scale_method == 'quantile':
             preprocessing_steps.append(('scaler', StandardScaler()))
         elif self.scale_method == 'minmax':
             preprocessing_steps.append(('scaler', MinMaxScaler()))

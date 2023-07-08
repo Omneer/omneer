@@ -10,4 +10,5 @@ dist/*
 .vscode/*
 .DS_Store
 __init__.py
+omneer_cli/processing/*
 
