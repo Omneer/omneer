@@ -1,12 +1,18 @@
+
 import torch
 import csv
 import pandas as pd
 import numpy as np
 from torch.utils.data import DataLoader
 from sklearn.experimental import enable_iterative_imputer
-from sklearn.impute import IterativeImputer
-from sklearn.preprocessing import QuantileTransformer, RobustScaler, PowerTransformer
+from sklearn.impute import IterativeImputer, SimpleImputer
+from sklearn.preprocessing import QuantileTransformer, RobustScaler, PowerTransformer, StandardScaler, MinMaxScaler
 from sklearn.impute import KNNImputer
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import FunctionTransformer
+from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.cross_decomposition import PLSRegression
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.decomposition import KernelPCA
@@ -14,10 +20,32 @@ from sklearn.linear_model import Lasso
 import os
 from tqdm import tqdm
 
+# Custom Transformer for handling missing values
+class CustomImputer(BaseEstimator, TransformerMixin):
+    def __init__(self, method='iterative', n_neighbors=5, max_iter=10):
+        self.method = method
+        self.n_neighbors = n_neighbors
+        self.max_iter = max_iter
+
+    def fit(self, X, y=None):
+        if self.method == 'iterative':
+            self.imputer_ = IterativeImputer(max_iter=self.max_iter, random_state=0)
+        elif self.method == 'knn':
+            self.imputer_ = KNNImputer(n_neighbors=self.n_neighbors)
+        else:
+            self.imputer_ = SimpleImputer(strategy=self.method)
+        self.imputer_.fit(X)
+        return self
+
+    def transform(self, X):
+        return self.imputer_.transform(X)
+
 class Data(torch.utils.data.Dataset):
-    def __init__(self, label, features, csv_dir):
+    def __init__(self, label, features, csv_dir, impute_method='iterative', scale_method='quantile'):
         self.features = features
         self.label = label
+        self.impute_method = impute_method
+        self.scale_method = scale_method
         content = self.read_csv(csv_dir)
         self.content = self.filter_incomplete_cases(content)
         self.x, self.y = self.process_data()
@@ -51,7 +79,6 @@ class Data(torch.utils.data.Dataset):
 
         return filtered_content
 
-
     def process_data(self):
         x = []
         y = []
@@ -63,8 +90,18 @@ class Data(torch.utils.data.Dataset):
             y.append(float(row[self.label]))
         x = np.array(x, dtype=np.float32)
         y = np.array(y, dtype=np.float32)
-        x = self.impute_missing_values(x)
-        x = self.normalize_features(x)
+
+        # Create preprocessing pipeline
+        preprocessing_steps = [('imputer', CustomImputer(method=self.impute_method))]
+        if self.scale_method == 'quantile':
+            preprocessing_steps.append(('scaler', QuantileTransformer()))
+        elif self.scale_method == 'standard':
+            preprocessing_steps.append(('scaler', StandardScaler()))
+        elif self.scale_method == 'minmax':
+            preprocessing_steps.append(('scaler', MinMaxScaler()))
+        preprocessing_pipeline = Pipeline(steps=preprocessing_steps)
+        x = preprocessing_pipeline.fit_transform(x)
+
         return x, y
 
     def __len__(self):
@@ -79,50 +116,6 @@ class Data(torch.utils.data.Dataset):
     @property
     def all(self):
         return self.x, self.y
-    
-    def impute_missing_values(self, x):
-        with tqdm(total=2, desc="Imputing missing values") as pbar:
-            pbar.set_postfix(stage="Iterative Imputer")
-            imputer = IterativeImputer(max_iter=10, random_state=0)
-
-            # Divide the iterative imputation process into smaller steps
-            num_steps = 10
-            num_rows = x.shape[0]
-            step_size = num_rows // num_steps
-
-            for i in range(num_steps):
-                start = i * step_size
-                end = (i + 1) * step_size
-                imputed_x = imputer.fit_transform(x[start:end])
-                x[start:end] = imputed_x
-                pbar.update(1 / num_steps)
-
-            pbar.set_postfix(stage="KNN Imputer")
-            knn_imputer = KNNImputer()
-            x = knn_imputer.fit_transform(x)
-            pbar.update(1)
-        return x
-
-    def normalize_features(self, x):
-        with tqdm(total=1, desc="Normalizing features") as pbar:
-            pbar.set_postfix(stage="Quantile Transformer")
-            qt = QuantileTransformer()
-            x = qt.fit_transform(x)
-            pbar.update(1)
-        return x
-    
-    def pls_da_transform(self, x):
-        pls_da = PLSRegression(n_components=10)
-        return pls_da.fit_transform(x, self.y)
-
-    def polynomial_features(self, x):
-        poly = PolynomialFeatures(degree=2, interaction_only=True, include_bias=False)
-        return poly.fit_transform(x)
-        
-    def lasso_feature_selection(self, x, y):
-        lasso = Lasso(alpha=0.1)
-        lasso.fit(x, y)
-        return x[:, lasso.coef_ != 0]
 
     def save_preprocessed_data(self, file_name):
         # Prepare a DataFrame
@@ -140,9 +133,8 @@ class Data(torch.utils.data.Dataset):
         os.makedirs(output_dir, exist_ok=True)
 
         # Save the DataFrame to a csv file
-        output_path = os.path.join(output_dir, f"{file_name_without_extension}.csv")  # Changed this line
+        output_path = os.path.join(output_dir, f"{file_name_without_extension}.csv")
         df.to_csv(output_path, index=False)
-
 
 
 if __name__ == "__main__":
@@ -166,6 +158,8 @@ if __name__ == "__main__":
                 label=label,
                 features=features,
                 csv_dir=csv_file,
+                impute_method='iterative',
+                scale_method='quantile'
             )
 
             # Save the preprocessed data to a new csv file

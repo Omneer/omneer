@@ -60,6 +60,8 @@ def main(csvfile, model_name, num_features=None):
             label='PD',
             features=features,
             csv_dir=csv_path_raw,
+            impute_method='iterative',
+            scale_method='quantile'
         )
         data.save_preprocessed_data(csv_path_processed)
 
@@ -74,6 +76,8 @@ def main(csvfile, model_name, num_features=None):
         label='PD',
         features=selected_features,
         csv_dir=csv_path_processed,
+        impute_method='iterative',
+        scale_method='quantile'
     )
 
     # For random data split
