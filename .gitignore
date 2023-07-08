@@ -1,12 +1,12 @@
 omneer/processing/test/*
 omneer/data/extra/*
-omneer/omneer.egg-info
+omneer.egg-info/*
 omneer/data/*
 omneer/data/raw/*
 omneer/data/preprocessing/*
 __pycache__/
-omneer/build/*
-omneer/dist/*
+build/*
+dist/*
 .vscode/*
 .DS_Store
 __init__.py
