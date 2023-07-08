@@ -182,10 +182,6 @@ def predict_command(
                 result = predict(str(input_file), model_name_normalized, int(num_features))
             console.print("[bold green]Analysis completed![/bold green]")
 
-            # Show some summary or statistics of the analysis result
-            console.print("[bold blue]Analysis Result:[/bold blue]")
-            console.print(result)
-
             # Save the analysis result to a file if the user chose to do so
             if save_result:
                 result_file = storage_dir / (csvfile + "_result.txt")
