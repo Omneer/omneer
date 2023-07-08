@@ -1,8 +1,19 @@
-from setuptools import setup, find_packages
+import sys
+
+from setuptools import find_packages, setup
+
+cur_ver = sys.version_info[:2]
+ver_str = ".".join(map(str, cur_ver))
+
+if cur_ver < (3, 8) or cur_ver > (3, 10):
+    raise RuntimeError(
+        f"Python {ver_str} is unsupported. Please use a Python version between 3.8 and"
+        " 3.10, inclusive."
+    )
 
 setup(
     name='omneer',
-    version='0.15',
+    version='0.16',
     packages=find_packages(),
     url='http://docs.omneer.xyz',
     license='MIT',
