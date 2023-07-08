@@ -8,4 +8,5 @@ __pycache__/
 omneer/build/*
 omneer/dist/*
 .vscode/*
+.DS_Store
 
