@@ -21,11 +21,11 @@ def load_and_preprocess_data(file_name):
     # Rename the first column as 'PD'
     df.rename(columns={0: 'PD'}, inplace=True)
 
-    df.iloc[:, 1:] = df.iloc[:, 1:].fillna(0)
+    df.iloc[:, 2:] = df.iloc[:, 2:].fillna(0)
 
     # Standardize the data (optional)
     scaler = StandardScaler()
-    df.iloc[:, 1:] = scaler.fit_transform(df.iloc[:, 1:])
+    df.iloc[:, 2:] = scaler.fit_transform(df.iloc[:, 2:])
     
     return df
 
@@ -45,7 +45,7 @@ def create_boxplot(df_melt):
 
 def calculate_correlations(df):
     # Calculate correlations
-    corr = df.iloc[:, 1:].corr()
+    corr = df.iloc[:, 2:].corr()
 
     return corr
 
@@ -58,7 +58,7 @@ def create_heatmap(corr):
 
 def determine_grid(df, num_cols=2):
     # Determine the number of rows and columns for the subplots
-    num_metabolites = len(df.columns[1:])
+    num_metabolites = len(df.columns[2:])
     num_rows = num_metabolites // num_cols
     num_rows += num_metabolites % num_cols
 
@@ -71,12 +71,12 @@ def create_histograms(df, num_rows, num_cols):
     # Flatten the 2D array to 1D for easier iteration
     axes = axes.ravel()
 
-    for index, column in enumerate(df.columns[1:]):
+    for index, column in enumerate(df.columns[2:]):
         sns.histplot(df, x=column, hue='PD', element='step', kde=True, ax=axes[index])
         axes[index].set_title(f"Distribution of Metabolite {column}")
 
     # Remove any leftover subplots
-    if len(df.columns[1:]) % num_cols:
+    if len(df.columns[2:]) % num_cols:
         axes[-1].remove()
 
     plt.tight_layout()
@@ -96,7 +96,7 @@ def detect_outliers(df):
 
 def create_kdeplot(df):
     # Creates a KDE plot for each variable
-    for column in df.columns[1:]:
+    for column in df.columns[2:]:
         plt.figure(figsize=(10, 5))
         sns.kdeplot(data=df, x=column, hue='PD', fill=True)
         plt.title(f'KDE Plot for {column}')
@@ -110,7 +110,7 @@ def create_violinplot(df_melt):
     plt.savefig(os.path.join(output_dir, 'violinplot.png'))
 
 def create_interactive_scatters(df):
-    for col in df.columns[1:]:
+    for col in df.columns[2:]:
         fig = px.scatter(df, x=col, y="PD", color="PD", size=abs(df[col]), hover_data=df.columns)
         fig.update_layout(title=f'Interactive Scatter Plot: {col} vs PD')
         fig.show()
@@ -119,7 +119,7 @@ def create_3d_scatters(df):
     num_metabolites = len(df.columns) - 1
     fig = plt.figure(figsize=(20, num_metabolites*5))
 
-    for i, col in enumerate(df.columns[1:], 1):
+    for i, col in enumerate(df.columns[2:], 1):
         ax = fig.add_subplot(num_metabolites, 1, i, projection='3d')
         ax.scatter3D(df[col], df["PD"], np.zeros(df[col].shape), c=df["PD"])
         ax.set_xlabel(col)
@@ -129,7 +129,7 @@ def create_3d_scatters(df):
     plt.tight_layout()
 
 def create_tsne(df):
-    X = df.iloc[:, 1:].values
+    X = df.iloc[:, 2:].values
     
     # Create a t-SNE object with custom perplexity and learning_rate
     tsne = TSNE(n_components=2, random_state=0, perplexity=30, learning_rate=200)
@@ -164,14 +164,14 @@ def create_pairplot(df):
     plt.savefig(os.path.join(output_dir, 'pairplot.png'))
 
 def create_dendrogram(df):
-    linked = linkage(df.iloc[:, 1:], method='ward')
+    linked = linkage(df.iloc[:, 2:], method='ward')
 
     plt.figure(figsize=(10, 7))
     dendrogram(linked, orientation='top', labels=list(df.index), distance_sort='descending', show_leaf_counts=True)
 
 def calculate_feature_importance(df):
     # Separate the features (X) from the target (y)
-    X = df.iloc[:, 1:]
+    X = df.iloc[:, 2:]
     y = df['PD']
 
     # Calculate the F-value and p-value for each feature using ANOVA

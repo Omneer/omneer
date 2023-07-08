@@ -4,7 +4,7 @@ import sys
 import argparse
 import matplotlib.pyplot as plt
 import pandas as pd
-from omneer.processing.preprocess.preprocessed import Data
+from omneer.processing.preprocess.preprocess import Data
 from omneer.processing.misc import get_metrics, get_calibration_curve, pr_auc_score, compute_ci
 from omneer.model.train import train
 from omneer.processing.bootstrap import bootstrap
@@ -34,9 +34,9 @@ def main(csvfile, model_name, num_features=None):
 
     if num_features:
         # Use the select_top_features function to get the selected features
-        selected_features = select_top_features("PD", df.columns[1:], csv_path, num_features)
+        selected_features = select_top_features("PD", df.columns[2:], csv_path, num_features)
     else:
-        selected_features = df.iloc[:, 1:]  # Use all features
+        selected_features = df.iloc[:, 2:]  # Use all features
 
     whole_data = Data(
         label='PD',

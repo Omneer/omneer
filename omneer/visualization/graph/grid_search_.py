@@ -27,8 +27,8 @@ df = pd.read_csv(data, encoding='latin1')
 df = df.sample(frac=1).reset_index(drop=True)  # shuffle rows
 print('length of columns = ', len(df.columns))
 
-X = df.iloc[:,1:]
-y = df.iloc[:,0]
+X = df.iloc[:,2:]
+y = df.iloc[:,1]
 
 # data split iter
 sss = ShuffleSplit(n_splits=100, test_size=0.4)

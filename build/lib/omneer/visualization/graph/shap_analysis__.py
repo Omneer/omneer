@@ -24,8 +24,8 @@ os.makedirs(save_dir + '/values', exist_ok=True)
 
 # read data
 df = pd.read_csv(data_csv)
-x = df.iloc[:,1:].to_numpy()
-y = df.iloc[:,0].to_numpy()
+x = df.iloc[:,2:].to_numpy()
+y = df.iloc[:,1].to_numpy()
 
 
 # load all model checkpoints one by one and apply SHAP analysis

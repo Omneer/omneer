@@ -34,7 +34,7 @@ def main(csvfile, model_name, num_features=None):
 
     if num_features:
         # Use the select_top_features function to get the selected features
-        selected_features = select_top_features("PD", df.columns[1:], csv_path, num_features)
+        selected_features = select_top_features("PD", df.columns[2:], csv_path, num_features)
     else:
         selected_features = df.iloc[:, 2:]  # Use all features
 

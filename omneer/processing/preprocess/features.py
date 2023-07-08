@@ -13,13 +13,13 @@ def load_and_preprocess_data(file_name):
     df = pd.read_csv(file_name, header=0)
 
     # Rename the first column as 'PD'
-    df.rename(columns={df.columns[0]: 'PD'}, inplace=True)
+    df.rename(columns={df.columns[1]: 'PD'}, inplace=True)
 
-    df.iloc[:, 1:] = df.iloc[:, 1:].fillna(0)
+    df.iloc[:, 2:] = df.iloc[:, 2:].fillna(0)
 
     # Standardize the data (optional)
     scaler = StandardScaler()
-    df.iloc[:, 1:] = scaler.fit_transform(df.iloc[:, 1:])
+    df.iloc[:, 2:] = scaler.fit_transform(df.iloc[:, 2:])
     
     return df
 
@@ -90,7 +90,7 @@ if __name__ == "__main__":
     for csv_file in csv_dir.glob("*.csv"):
         label = "PD"
         data = load_and_preprocess_data(csv_file)
-        features = data.columns[1:].tolist()
+        features = data.columns[2:].tolist()
 
         # Save the features data to a new csv file
         save_features_data(label, features, csv_file, csv_file.name, 8)
