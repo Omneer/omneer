@@ -2,6 +2,7 @@ omneer/processing/test/*
 omneer/data/extra/*
 omneer/omneer.egg-info
 omneer/data/*
+omneer/data/raw/*
 omneer/data/preprocessing/*
 __pycache__/
 
