@@ -1,2 +1,0 @@
-omneer
-omneer_cli
