@@ -3,4 +3,5 @@ omneer/data/extra/*
 omneer/omneer.egg-info
 omneer/data/*
 omneer/data/preprocessing/*
+__pycache__/
 
