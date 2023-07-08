@@ -5,4 +5,6 @@ omneer/data/*
 omneer/data/raw/*
 omneer/data/preprocessing/*
 __pycache__/
+omneer/build/*
+omneer/dist/*
 
