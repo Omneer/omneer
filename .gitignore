@@ -1,3 +1,4 @@
 omneer/processing/test/**
 omneer/data/extra/**
 omneer/omneer.egg-info
+omneer/data/**
