@@ -13,7 +13,7 @@ if cur_ver < (3, 8) or cur_ver > (3, 10):
 
 setup(
     name='omneer',
-    version='v0.1.0',
+    version='v0.1.2',
     url='http://docs.omneer.xyz',
     license='MIT',
     author='William Blair',

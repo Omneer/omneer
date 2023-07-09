@@ -45,7 +45,6 @@ def train(
             max_depth = 1,
             reg_alpha = .5,
             reg_lambda = .05,
-            use_label_encoder = False,
             eval_metric = 'logloss',
             n_estimators = 50
         )

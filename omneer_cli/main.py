@@ -141,13 +141,12 @@ def predict_command(
     save_result: bool = typer.Option(False, "--save", "-s", help="Whether to save the analysis result to a file")
 ):
     """Perform analysis on a CSV file using the specified model and number of features."""
-
-    # Prompt the user for the csvfile, model_name, and num_features
     csvfile = typer.prompt("Enter the name of the CSV file to analyze")
     model_name = typer.prompt("Enter the name of the model to use for the analysis")
     num_features = typer.prompt("Enter the number of features to use in the analysis", type=int)
-
+    
     home_dir = Path.home()
+    print(home_dir)
     omneer_files_dir = home_dir / "omneer_files"
     data_dir = omneer_files_dir / "data"
     raw_dir = data_dir / "raw"
@@ -194,7 +193,6 @@ def predict_command(
     else:
         console.print("[bold yellow]Analysis cancelled by user.[/bold yellow]")
 
-
 @main.command(name="preprocess", help="Preprocess a CSV file")
 def preprocess_command():
     """Preprocess a CSV file."""
@@ -221,14 +219,13 @@ def preprocess_command():
     if typer.confirm("Do you want to continue?"):
         try:
             with console.status("[bold green]Running the preprocessing...[/bold green]", spinner="dots"):
-                preprocessed_data = preprocess_data(input_file, label_name, features_count)
+                preprocessed_data = preprocess_data(input_file, label_name, features_count, home_dir)
+            console.print(f"[bold green]Preprocessing completed! Preprocessed data is saved in {preprocessed_data}[/bold green]")
         except Exception as e:
             console.print(f"[bold red]An error occurred during preprocessing: {e}[/bold red]")
-        console.print("[bold green]Preprocessing completed![/bold green]")
     else:
         console.print("[bold yellow]Preprocessing cancelled by user.[/bold yellow]")
 
 if __name__ == "__main__":
     main()
-
 
