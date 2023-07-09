@@ -5,9 +5,11 @@ from rich.console import Console
 from rich.progress import Progress, TaskID, BarColumn
 from pathlib import Path
 import subprocess
+import pandas as pd
 import shutil
 import omneer_cli.processing.main as processing
 from omneer_cli.processing.main import predict
+from omneer_cli.processing.preprocess.preprocess import Data, preprocess_data
 
 
 main = typer.Typer(
@@ -84,7 +86,6 @@ def intro_command():
         console.print(f"• {tip}")
 
     console.print(logo, style="#2f74d4")
-
 
 @main.command(name="options", help="Show the list of available commands")
 def help_command():
@@ -193,6 +194,39 @@ def predict_command(
     else:
         console.print("[bold yellow]Analysis cancelled by user.[/bold yellow]")
 
+
+@main.command(name="preprocess", help="Preprocess a CSV file")
+def preprocess_command():
+    """Preprocess a CSV file."""
+    
+    csvfile = typer.prompt("Enter the name of the CSV file to preprocess")
+
+    home_dir = Path.home()
+    omneer_files_dir = home_dir / "omneer_files"
+    data_dir = omneer_files_dir / "data"
+    raw_dir = data_dir / "raw"
+
+    input_file = raw_dir / csvfile
+    
+    if not input_file.is_file():
+        console.print(f"[bold red]Input file '{input_file}' not found.[/bold red]")
+        raise typer.Exit()
+
+    # Determine label_name and features_count from the CSV file
+    df = pd.read_csv(input_file, encoding='latin1')
+    label_name = df.columns[1]  # Second column is the label
+    features_count = len(df.columns) - 2  # Minus patient_name and label_name columns
+
+    console.print(f"About to preprocess the file '{input_file}' using '{label_name}' as label and {features_count} as the number of features.")
+    if typer.confirm("Do you want to continue?"):
+        try:
+            with console.status("[bold green]Running the preprocessing...[/bold green]", spinner="dots"):
+                preprocessed_data = preprocess_data(input_file, label_name, features_count)
+        except Exception as e:
+            console.print(f"[bold red]An error occurred during preprocessing: {e}[/bold red]")
+        console.print("[bold green]Preprocessing completed![/bold green]")
+    else:
+        console.print("[bold yellow]Preprocessing cancelled by user.[/bold yellow]")
 
 if __name__ == "__main__":
     main()
