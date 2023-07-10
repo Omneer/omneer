@@ -43,6 +43,8 @@ setup(
         'typer>=0.3.2',
         'halo>=0.0.31',
         'rich>=10.6.0',
+        'seaborn>=0.11.0',
+        'plotly>=5.1.0',
     ],
     entry_points={
         'console_scripts': [

@@ -1,15 +1,22 @@
 import typer
 import time
 import os
+from typing import Optional
 from rich.console import Console
+from rich.spinner import Spinner
+from rich.table import Table
 from rich.progress import Progress, TaskID, BarColumn
+import typer
 from pathlib import Path
 import subprocess
 import pandas as pd
+import questionary
 import shutil
 import omneer_cli.processing.main as processing
 from omneer_cli.processing.main import predict
 from omneer_cli.processing.preprocess.preprocess import Data, preprocess_data
+from omneer_cli.processing.visualization.raw.vis import load_and_preprocess_data, calculate_feature_importance, plot_feature_importance
+from omneer_cli.processing.preprocess.features import process_data
 
 
 main = typer.Typer(
@@ -225,6 +232,83 @@ def preprocess_command():
             console.print(f"[bold red]An error occurred during preprocessing: {e}[/bold red]")
     else:
         console.print("[bold yellow]Preprocessing cancelled by user.[/bold yellow]")
+
+
+@main.command(name="features", help="Create new features CSV file")
+def features_command():
+    """Create new features CSV file."""
+
+    csvfile = typer.prompt("Enter the name of the CSV file:")
+
+    home_dir = Path.home()
+    omneer_files_dir = home_dir / "omneer_files"
+    data_dir = omneer_files_dir / "data"
+    raw_dir = data_dir / "raw"
+    features_dir = data_dir / "features"
+
+    input_file = raw_dir / csvfile
+
+    if not input_file.is_file():
+        console.print(f"[bold red]Input file '{input_file}' not found.[/bold red]")
+        raise typer.Exit()
+
+    num_features = typer.prompt("Enter the number of features to select:", type=int)
+
+    try:
+        features_dir.mkdir(parents=True, exist_ok=True)  # Create the features directory if it doesn't exist
+        with console.status("[bold green]Running feature selection...", spinner="dots"):
+            process_data(input_file, num_features, features_dir)
+        console.print("[bold green]Feature selection completed![/bold green]")
+    except Exception as e:
+        console.print(f"[bold red]An error occurred during feature selection: {e}[/bold red]")
+
+
+@main.command("plot features")
+def analyze():
+    """Analyze a CSV file."""
+
+    # Directories to be created
+    home_dir = Path.home()
+    omneer_files_dir = home_dir / "omneer_files"
+    data_dir = omneer_files_dir / "data"
+    raw_dir = data_dir / "raw"
+    # Create directories if they don't exist
+    raw_dir.mkdir(parents=True, exist_ok=True)
+    # Fetch all CSV files in the raw directory
+    csv_files = [f.name for f in raw_dir.glob('*.csv')]
+
+    if not csv_files:
+        typer.echo("[bold red]No CSV files found in the directory[/bold red]")
+        raise typer.Exit()
+
+    # Prompt user to select a CSV file
+    file_name = typer.prompt("Select a CSV file to analyze", default=csv_files[0])
+    input_file = raw_dir / file_name
+
+    typer.echo(f"Analyzing the file '{input_file}'")
+
+    # Load and preprocess data
+    try:
+        df = load_and_preprocess_data(input_file)
+    except Exception as e:
+        typer.echo(f"[bold red]Failed to load and preprocess data: {e}[/bold red]")
+        raise typer.Exit()
+
+    # Calculate feature importance
+    try:
+        importance_df = calculate_feature_importance(df)
+    except Exception as e:
+        typer.echo(f"[bold red]Failed to calculate feature importance: {e}[/bold red]")
+        raise typer.Exit()
+
+    # Plot feature importance
+    try:
+        plot_feature_importance(importance_df)
+    except Exception as e:
+        typer.echo(f"[bold red]Failed to plot feature importance: {e}[/bold red]")
+        raise typer.Exit()
+
+    typer.echo("[bold green]Analysis completed![/bold green]")
 
 if __name__ == "__main__":
     main()
