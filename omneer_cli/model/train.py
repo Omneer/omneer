@@ -31,7 +31,7 @@ def train(
 
     assert model_name in ['mlp', 'xgb', 'ensemble', 'rf', 'lr', 'svm', 'lda', 'lgbm', 'tabnet', 'catboost']
 
-    # Initialize models
+    # initialize models
     if model_name == 'mlp':
         model = MLP(
             hidden_dims = (32,), # Add more layers and increase the number of hidden units
@@ -41,8 +41,6 @@ def train(
             lambda_l2 = 0.0004719190005714674, 
             device = 'cpu'
             )
-        param_grid = {'hidden_dims': [(32,), (64,)], 'num_epochs': [64, 128], 'batch_size': [16, 32]}
-        model = GridSearchCV(model, param_grid, cv=5, scoring=scoring)
 
     elif model_name == 'xgb':
         model = XGBClassifier(
@@ -56,8 +54,6 @@ def train(
             eval_metric = 'logloss',
             n_estimators = 50
         )
-        param_grid = {'learning_rate': [0.1, 0.3], 'max_depth': [1, 5, 10], 'n_estimators': [50, 100, 200]}
-        model = GridSearchCV(model, param_grid, cv=5, scoring=scoring)
 
     elif model_name == 'ensemble':
         base_models = [
@@ -71,23 +67,9 @@ def train(
         voting_model = VotingClassifier(estimators=base_models, voting='soft')
         model = voting_model
 
-        final_model = LogisticRegression()  # Change this to experiment with different final estimators
+        #final_model = LogisticRegression()  # Change this to experiment with different final estimators
     
-        model = StackingClassifier(estimators=base_models, final_estimator=final_model, cv=10)
-
-        # Use GradientBoostingClassifier as the final estimator
-        final_model = GradientBoostingClassifier(random_state=42)
-        
-        stacking_model = StackingClassifier(estimators=base_models, final_estimator=final_model, cv=5)
-
-        # Define the hyperparameters you want to tune
-        param_grid = {
-            'final_estimator__learning_rate': [0.1, 0.01, 0.001],
-            'final_estimator__n_estimators': [50, 100, 200]
-        }
-        
-        # Use GridSearchCV for hyperparameter tuning
-        model = GridSearchCV(stacking_model, param_grid, cv=5, scoring=scoring)
+        #model = StackingClassifier(estimators=base_models, final_estimator=final_model, cv=10)
 
     elif model_name == 'rf':
         model = RandomForestClassifier(
