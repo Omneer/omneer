@@ -16,6 +16,7 @@ import omneer_cli.processing.main as processing
 from omneer_cli.processing.main import predict
 from omneer_cli.processing.preprocess.preprocess import Data, preprocess_data
 from omneer_cli.processing.visualization.raw.vis import load_and_preprocess_data, calculate_feature_importance, plot_feature_importance
+from omneer_cli.processing.visualization.raw.eda import load_and_clean_data, perform_eda
 from omneer_cli.processing.preprocess.features import process_data
 
 
@@ -286,6 +287,22 @@ def features_command():
     except Exception as e:
         console.print(f"[bold red]An error occurred during feature selection: {e}[/bold red]")
 
+
+@main.command(name="eda", help="Provide exploratory analysis")
+def eda_command():
+    # Prompt for CSV file name
+    csvfile = typer.prompt("Enter the name of the CSV file")
+
+    home_dir = Path.home()
+    omneer_files_dir = home_dir / "omneer_files"
+    data_dir = omneer_files_dir / "data"
+    raw_dir = data_dir / "raw"
+    
+    # Load and clean data
+    df = load_and_clean_data(raw_dir / csvfile)
+
+    # Perform EDA
+    perform_eda(df)
 
 @main.command("plot features")
 def analyze():
