@@ -1,23 +1,17 @@
 import torch
-import csv
 import pandas as pd
 import numpy as np
-from torch.utils.data import DataLoader
 from sklearn.experimental import enable_iterative_imputer
-from sklearn.impute import IterativeImputer, SimpleImputer
+from sklearn.impute import IterativeImputer, SimpleImputer, KNNImputer
 from sklearn.preprocessing import QuantileTransformer, RobustScaler, PowerTransformer, StandardScaler, MinMaxScaler
-from sklearn.impute import KNNImputer
-from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
-from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import FunctionTransformer
 from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.cross_decomposition import PLSRegression
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn.decomposition import KernelPCA
-from sklearn.linear_model import Lasso
+from sklearn.decomposition import PCA
+from sklearn.ensemble import IsolationForest
+from sklearn.feature_selection import SelectFromModel, SelectKBest, f_classif
+from sklearn.preprocessing import FunctionTransformer
+from sklearn.linear_model import LinearRegression
 from pathlib import Path
-import os
 from tqdm import tqdm
 
 # Custom Transformer for handling missing values
@@ -41,67 +35,61 @@ class CustomImputer(BaseEstimator, TransformerMixin):
         return self.imputer_.transform(X)
 
 class Data(torch.utils.data.Dataset):
-    def __init__(self, label, features, csv_dir, home_dir, impute_method='iterative', scale_method='quantile'):
+    def __init__(self, label, features, csv_dir, home_dir, 
+                 impute_method='iterative', scale_method='quantile', 
+                 outlier_detection=False, feature_selection=None, transform_method=None):
         self.features = features
         self.label = label
         self.home_dir = home_dir
         self.impute_method = impute_method
         self.scale_method = scale_method
+        self.outlier_detection = outlier_detection
+        self.feature_selection = feature_selection
+        self.transform_method = transform_method
         content = self.read_csv(csv_dir)
         self.content = self.filter_incomplete_cases(content)
         self.x, self.y = self.process_data()
 
     def read_csv(self, csv_file):
-        content = []
-        with open(csv_file, 'r') as csvfile:
-            reader = csv.DictReader(csvfile)
-            for row in reader:
-                content.append(row)
-        return content
+        return pd.read_csv(csv_file)
 
-    def filter_incomplete_cases(self, content):
-        # Identify empty columns
-        empty_columns = []
-        for key in self.features:
-            column_values = [row.get(key, '') for row in content]
-            if all(value == '' for value in column_values):
-                empty_columns.append(key)
-
-        # Remove empty columns
-        self.features = [key for key in self.features if key not in empty_columns]
-
-        # Remove rows with empty values in any remaining features or label
-        filtered_content = []
-        for row in content:
-            if all(row.get(key, '') != '' for key in self.features) and row.get(self.label, '') != '':
-                filtered_row = {key: row[key] for key in self.features}
-                filtered_row[self.label] = row[self.label]
-                filtered_content.append(filtered_row)
-
-        return filtered_content
+    def filter_incomplete_cases(self, df):
+        return df.dropna(subset=self.features + [self.label])
 
     def process_data(self):
-        x = []
-        y = []
-        for row in self.content:
-            x_row = []
-            for key in self.features:
-                x_row.append(float(row[key]))
-            x.append(x_row)
-            y.append(float(row[self.label]))
-        x = np.array(x, dtype=np.float32)
-        y = np.array(y, dtype=np.float32)
+        x = self.content[self.features].values
+        y = self.content[self.label].values
 
         # Create preprocessing pipeline
         preprocessing_steps = [('imputer', CustomImputer(method=self.impute_method))]
-        if self.scale_method == 'imputer':
-            preprocessing_steps.append(('scaler', QuantileTransformer()))
+
+        if self.transform_method == 'log':
+            preprocessing_steps.append(('transformer', FunctionTransformer(np.log1p)))
+        elif self.transform_method == 'sqrt':
+            preprocessing_steps.append(('transformer', FunctionTransformer(np.sqrt)))
+
+        if self.scale_method == 'robust':
+            preprocessing_steps.append(('scaler', RobustScaler()))
         elif self.scale_method == 'quantile':
+            preprocessing_steps.append(('scaler', QuantileTransformer()))
+        elif self.scale_method == 'standard':
             preprocessing_steps.append(('scaler', StandardScaler()))
         elif self.scale_method == 'minmax':
             preprocessing_steps.append(('scaler', MinMaxScaler()))
+
+        if self.feature_selection == 'pca':
+            preprocessing_steps.append(('selector', PCA(n_components=0.95)))
+        elif self.feature_selection == 'linear':
+            preprocessing_steps.append(('selector', SelectFromModel(LinearRegression())))
+
         preprocessing_pipeline = Pipeline(steps=preprocessing_steps)
-        x = preprocessing_pipeline.fit_transform(x)
+        x = preprocessing_pipeline.fit_transform(x, y)
+
+        if self.outlier_detection:
+            clf = IsolationForest(contamination=0.1)
+            outliers = clf.fit_predict(x)
+            x = x[outliers == 1]
+            y = y[outliers == 1]
 
         return x, y
 
@@ -137,7 +125,9 @@ class Data(torch.utils.data.Dataset):
         output_path = output_dir / f"{file_name_without_extension}_preprocessed.csv"
         df.to_csv(output_path, index=False)
 
-def preprocess_data(file_path, label_name, feature_count, home_dir):
+def preprocess_data(file_path, label_name, feature_count, home_dir, 
+                    impute_method='iterative', scale_method='quantile', 
+                    outlier_detection=False, feature_selection=None, transform_method=None):
     df = pd.read_csv(file_path, encoding='latin1')
 
     # Extract all the columns except 'Patient'. The 'Patient' column should be the first column in the data.
@@ -155,8 +145,11 @@ def preprocess_data(file_path, label_name, feature_count, home_dir):
         features=features,
         csv_dir=file_path,
         home_dir=home_dir,
-        impute_method='iterative',
-        scale_method='quantile'
+        impute_method=impute_method,
+        scale_method=scale_method,
+        outlier_detection=outlier_detection,
+        feature_selection=feature_selection,
+        transform_method=transform_method
     )
 
     # Prepare a DataFrame
@@ -165,7 +158,14 @@ def preprocess_data(file_path, label_name, feature_count, home_dir):
 
     # Add the label as the first column
     df_preprocessed.insert(0, label_name, y)
-    df_preprocessed.columns = [label_name] + features
+
+    # If PCA or linear feature selection was applied, rename the transformed features
+    if data_preprocess.feature_selection == 'pca':
+        df_preprocessed.columns = [label_name] + [f'PCA_feature_{i}' for i in range(df_preprocessed.shape[1]-1)]
+    elif data_preprocess.feature_selection == 'linear':
+        df_preprocessed.columns = [label_name] + [f'linear_feature_{i}' for i in range(df_preprocessed.shape[1]-1)]
+    else:
+        df_preprocessed.columns = [label_name] + features
 
     # Add back the 'Patient' column to the first position of the preprocessed dataframe
     df_preprocessed.insert(0, 'Patient', df['Patient'])
@@ -184,20 +184,20 @@ if __name__ == "__main__":
     csv_dir = home_dir / 'omneer_files' / 'data' / 'raw'
     for file_path in csv_dir.iterdir():
         if file_path.name.endswith('.csv'):
-
             df = pd.read_csv(file_path, encoding='latin1')
 
             patient = 'Patient'
             label = 'PD'
             features = df.columns[2:].tolist()
 
-            data = Data(
-                label=label,
-                features=features,
-                csv_dir=file_path,
-                home_dir=home_dir,  # pass home_dir to Data class
+            preprocess_data(
+                file_path=file_path,
+                label_name=label,
+                feature_count=len(features),
+                home_dir=home_dir,
                 impute_method='iterative',
-                scale_method='quantile'
+                scale_method='quantile',
+                outlier_detection=False,
+                feature_selection=None,
+                transform_method=None
             )
-
-            data.save_preprocessed_data(file_path)

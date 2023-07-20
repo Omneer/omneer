@@ -203,8 +203,19 @@ def predict_command(
 @main.command(name="preprocess", help="Preprocess a CSV file")
 def preprocess_command():
     """Preprocess a CSV file."""
-    
+
     csvfile = typer.prompt("Enter the name of the CSV file to preprocess")
+    impute_method = typer.prompt("Enter the imputation method (iterative, knn, mean, median, most_frequent, constant)")
+    scale_method = typer.prompt("Enter the scaling method (robust, quantile, standard, minmax)")
+    transform_method = typer.prompt("Enter the transformation method (log, sqrt, None for no transformation)")
+    feature_selection = typer.prompt("Enter the feature selection method (pca, linear, None for no feature selection)")
+    outlier_detection = typer.confirm("Would you like to perform outlier detection and removal?")
+
+    # Change 'None' to None
+    if transform_method.lower() == 'none':
+        transform_method = None
+    if feature_selection.lower() == 'none':
+        feature_selection = None
 
     home_dir = Path.home()
     omneer_files_dir = home_dir / "omneer_files"
@@ -212,7 +223,7 @@ def preprocess_command():
     raw_dir = data_dir / "raw"
 
     input_file = raw_dir / csvfile
-    
+
     if not input_file.is_file():
         console.print(f"[bold red]Input file '{input_file}' not found.[/bold red]")
         raise typer.Exit()
@@ -226,13 +237,22 @@ def preprocess_command():
     if typer.confirm("Do you want to continue?"):
         try:
             with console.status("[bold green]Running the preprocessing...[/bold green]", spinner="dots"):
-                preprocessed_data = preprocess_data(input_file, label_name, features_count, home_dir)
+                preprocessed_data = preprocess_data(
+                    input_file, 
+                    label_name, 
+                    features_count, 
+                    home_dir, 
+                    impute_method=impute_method, 
+                    scale_method=scale_method,
+                    outlier_detection=outlier_detection,
+                    feature_selection=feature_selection,
+                    transform_method=transform_method
+                )
             console.print(f"[bold green]Preprocessing completed! Preprocessed data is saved in {preprocessed_data}[/bold green]")
         except Exception as e:
             console.print(f"[bold red]An error occurred during preprocessing: {e}[/bold red]")
     else:
         console.print("[bold yellow]Preprocessing cancelled by user.[/bold yellow]")
-
 
 @main.command(name="features", help="Create new features CSV file")
 def features_command():
