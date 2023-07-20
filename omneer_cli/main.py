@@ -206,10 +206,12 @@ def preprocess_command():
 
     csvfile = typer.prompt("Enter the name of the CSV file to preprocess")
     impute_method = typer.prompt("Enter the imputation method (iterative, knn, mean, median, most_frequent, constant)")
-    scale_method = typer.prompt("Enter the scaling method (robust, quantile, standard, minmax)")
+    scale_method = typer.prompt("Enter the scaling method (robust, quantile, standard, minmax, yeo-johnson)")
     transform_method = typer.prompt("Enter the transformation method (log, sqrt, None for no transformation)")
-    feature_selection = typer.prompt("Enter the feature selection method (pca, linear, None for no feature selection)")
+    feature_selection = typer.prompt("Enter the feature selection method (pca, linear, automl, None for no feature selection)")
     outlier_detection = typer.confirm("Would you like to perform outlier detection and removal?")
+    augment_data = typer.confirm("Would you like to perform data augmentation using SMOTE?")
+    handle_categorical = typer.prompt("Enter the method to handle categorical variables (onehot, ordinal)")
 
     # Change 'None' to None
     if transform_method.lower() == 'none':
@@ -246,7 +248,9 @@ def preprocess_command():
                     scale_method=scale_method,
                     outlier_detection=outlier_detection,
                     feature_selection=feature_selection,
-                    transform_method=transform_method
+                    transform_method=transform_method,
+                    augment_data=augment_data,
+                    handle_categorical=handle_categorical
                 )
             console.print(f"[bold green]Preprocessing completed! Preprocessed data is saved in {preprocessed_data}[/bold green]")
         except Exception as e:

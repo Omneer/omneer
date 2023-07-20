@@ -1,9 +1,11 @@
 import torch
 import pandas as pd
 import numpy as np
+import logging
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer, SimpleImputer, KNNImputer
-from sklearn.preprocessing import QuantileTransformer, RobustScaler, PowerTransformer, StandardScaler, MinMaxScaler
+from sklearn.preprocessing import QuantileTransformer, RobustScaler, PowerTransformer, StandardScaler, MinMaxScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.decomposition import PCA
@@ -13,6 +15,13 @@ from sklearn.preprocessing import FunctionTransformer
 from sklearn.linear_model import LinearRegression
 from pathlib import Path
 from tqdm import tqdm
+from tpot import TPOTClassifier
+from imblearn.over_sampling import SMOTE
+from joblib import Parallel, delayed
+from sklearn.exceptions import NotFittedError
+
+# Enable logging
+logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
 
 # Custom Transformer for handling missing values
 class CustomImputer(BaseEstimator, TransformerMixin):
@@ -34,10 +43,38 @@ class CustomImputer(BaseEstimator, TransformerMixin):
     def transform(self, X):
         return self.imputer_.transform(X)
 
+# AutoML for feature selection
+def automl_feature_selection(X, y):
+    tpot = TPOTClassifier(generations=5, population_size=50, verbosity=2)
+    tpot.fit(X, y)
+
+    # Get the feature importances of the final model
+    feature_importances = tpot.fitted_pipeline_.steps[-1][1].feature_importances_
+
+    # Get the indices of the features sorted by importance
+    indices = np.argsort(feature_importances)
+
+    # Select the top 10 features
+    top_10_indices = indices[-10:]
+
+    # Return only the top 10 features
+    return X[:, top_10_indices]
+
+# Data augmentation using SMOTE
+def smote_augmentation(X, y):
+    smote = SMOTE()
+    return smote.fit_resample(X, y)
+
+# Advanced scaling method
+def yeo_johnson_scaling(X):
+    scaler = PowerTransformer(method='yeo-johnson')
+    return scaler.fit_transform(X)
+
 class Data(torch.utils.data.Dataset):
     def __init__(self, label, features, csv_dir, home_dir, 
                  impute_method='iterative', scale_method='quantile', 
-                 outlier_detection=False, feature_selection=None, transform_method=None):
+                 outlier_detection=False, feature_selection=None, transform_method=None, 
+                 augment_data=False, handle_categorical='onehot'):
         self.features = features
         self.label = label
         self.home_dir = home_dir
@@ -46,9 +83,18 @@ class Data(torch.utils.data.Dataset):
         self.outlier_detection = outlier_detection
         self.feature_selection = feature_selection
         self.transform_method = transform_method
+        self.augment_data = augment_data
+        self.handle_categorical = handle_categorical
         content = self.read_csv(csv_dir)
-        self.content = self.filter_incomplete_cases(content)
+        self.content = content.dropna(subset=self.features)  # Remove rows with missing features
+        self.content.dropna(subset=[self.label], inplace=True)  # Remove rows with missing labels
         self.x, self.y = self.process_data()
+
+    def read_csv(self, csv_file):
+        return pd.read_csv(csv_file)
+
+    def filter_incomplete_cases(self, df):
+        return df.dropna(subset=[self.label] + self.features)
 
     def read_csv(self, csv_file):
         return pd.read_csv(csv_file)
@@ -57,41 +103,43 @@ class Data(torch.utils.data.Dataset):
         return df.dropna(subset=self.features + [self.label])
 
     def process_data(self):
-        x = self.content[self.features].values
-        y = self.content[self.label].values
+        # Separate features into numerical and categorical
+        numerical_features = self.content[self.features].select_dtypes(include=['int64', 'float64']).columns.tolist()
+        categorical_features = self.content[self.features].select_dtypes(include=['object', 'category', 'bool']).columns.tolist()
 
-        # Create preprocessing pipeline
-        preprocessing_steps = [('imputer', CustomImputer(method=self.impute_method))]
+        # Define the preprocessing for numerical and categorical features
+        numerical_transformer = Pipeline(steps=[
+            ('imputer', CustomImputer(method=self.impute_method)),
+            ('scaler', PowerTransformer(method='yeo-johnson'))])
+        categorical_transformer = Pipeline(steps=[
+            ('imputer', SimpleImputer(strategy='most_frequent')),
+            ('onehot', OneHotEncoder(handle_unknown='ignore'))])
 
-        if self.transform_method == 'log':
-            preprocessing_steps.append(('transformer', FunctionTransformer(np.log1p)))
-        elif self.transform_method == 'sqrt':
-            preprocessing_steps.append(('transformer', FunctionTransformer(np.sqrt)))
+        # Combine the transformers
+        preprocessor = ColumnTransformer(
+            transformers=[
+                ('num', numerical_transformer, numerical_features),
+                ('cat', categorical_transformer, categorical_features)])
 
-        if self.scale_method == 'robust':
-            preprocessing_steps.append(('scaler', RobustScaler()))
-        elif self.scale_method == 'quantile':
-            preprocessing_steps.append(('scaler', QuantileTransformer()))
-        elif self.scale_method == 'standard':
-            preprocessing_steps.append(('scaler', StandardScaler()))
-        elif self.scale_method == 'minmax':
-            preprocessing_steps.append(('scaler', MinMaxScaler()))
+        # Fit and transform the features
+        X = preprocessor.fit_transform(self.content[self.features])
 
-        if self.feature_selection == 'pca':
-            preprocessing_steps.append(('selector', PCA(n_components=0.95)))
-        elif self.feature_selection == 'linear':
-            preprocessing_steps.append(('selector', SelectFromModel(LinearRegression())))
+        # Apply feature selection using AutoML
+        if self.feature_selection == 'automl':
+            X = automl_feature_selection(X, self.content[self.label])
 
-        preprocessing_pipeline = Pipeline(steps=preprocessing_steps)
-        x = preprocessing_pipeline.fit_transform(x, y)
+        # Apply SMOTE data augmentation
+        if self.augment_data:
+            X, y = smote_augmentation(X, self.content[self.label])
 
+        # Outlier detection
         if self.outlier_detection:
             clf = IsolationForest(contamination=0.1)
-            outliers = clf.fit_predict(x)
-            x = x[outliers == 1]
+            outliers = clf.fit_predict(X)
+            X = X[outliers == 1]
             y = y[outliers == 1]
 
-        return x, y
+        return X, y
 
     def __len__(self):
         return len(self.content)
@@ -127,18 +175,15 @@ class Data(torch.utils.data.Dataset):
 
 def preprocess_data(file_path, label_name, feature_count, home_dir, 
                     impute_method='iterative', scale_method='quantile', 
-                    outlier_detection=False, feature_selection=None, transform_method=None):
+                    outlier_detection=False, feature_selection=None, transform_method=None,
+                    augment_data=False, handle_categorical='onehot'):
     df = pd.read_csv(file_path, encoding='latin1')
 
-    # Extract all the columns except 'Patient'. The 'Patient' column should be the first column in the data.
+    # Extract all the columns. The label column is the second column in the data.
     all_cols = df.columns.tolist()
 
-    # But remove it from the features we want to preprocess
-    all_cols.remove('Patient')
-    features = all_cols[:feature_count]
-
-    # Ensure label is not also treated as a feature
-    features.remove(label_name)
+    # But remove the patient and label columns from the features we want to preprocess
+    features = all_cols[2:feature_count+2]
 
     data_preprocess = Data(
         label=label_name,
@@ -149,7 +194,9 @@ def preprocess_data(file_path, label_name, feature_count, home_dir,
         scale_method=scale_method,
         outlier_detection=outlier_detection,
         feature_selection=feature_selection,
-        transform_method=transform_method
+        transform_method=transform_method,
+        augment_data=augment_data,
+        handle_categorical=handle_categorical
     )
 
     # Prepare a DataFrame
@@ -160,10 +207,8 @@ def preprocess_data(file_path, label_name, feature_count, home_dir,
     df_preprocessed.insert(0, label_name, y)
 
     # If PCA or linear feature selection was applied, rename the transformed features
-    if data_preprocess.feature_selection == 'pca':
-        df_preprocessed.columns = [label_name] + [f'PCA_feature_{i}' for i in range(df_preprocessed.shape[1]-1)]
-    elif data_preprocess.feature_selection == 'linear':
-        df_preprocessed.columns = [label_name] + [f'linear_feature_{i}' for i in range(df_preprocessed.shape[1]-1)]
+    if data_preprocess.feature_selection == 'automl':
+        df_preprocessed.columns = [label_name] + [f'automl_feature_{i}' for i in range(df_preprocessed.shape[1]-1)]
     else:
         df_preprocessed.columns = [label_name] + features
 
@@ -196,8 +241,10 @@ if __name__ == "__main__":
                 feature_count=len(features),
                 home_dir=home_dir,
                 impute_method='iterative',
-                scale_method='quantile',
+                scale_method='yeo-johnson',
                 outlier_detection=False,
-                feature_selection=None,
-                transform_method=None
+                feature_selection='automl',
+                transform_method=None,
+                augment_data=True,
+                handle_categorical='onehot'
             )
