@@ -44,7 +44,9 @@ class CustomImputer(BaseEstimator, TransformerMixin):
         return self.imputer_.transform(X)
 
 # AutoML for feature selection
-def automl_feature_selection(X, y):
+# AutoML for feature selection
+# AutoML for feature selection
+def automl_feature_selection(X, y, num_features):
     tpot = TPOTClassifier(generations=5, population_size=50, verbosity=2)
     tpot.fit(X, y)
 
@@ -54,11 +56,12 @@ def automl_feature_selection(X, y):
     # Get the indices of the features sorted by importance
     indices = np.argsort(feature_importances)
 
-    # Select the top 10 features
-    top_10_indices = indices[-10:]
+    # Select the top num_features features
+    top_indices = indices[-num_features:]
 
-    # Return only the top 10 features
-    return X[:, top_10_indices]
+    # Return only the top num_features features
+    return X[:, top_indices]
+
 
 # Data augmentation using SMOTE
 def smote_augmentation(X, y):
@@ -74,7 +77,7 @@ class Data(torch.utils.data.Dataset):
     def __init__(self, label, features, csv_dir, home_dir, 
                  impute_method='iterative', scale_method='quantile', 
                  outlier_detection=False, feature_selection=None, transform_method=None, 
-                 augment_data=False, handle_categorical='onehot'):
+                 augment_data=False, handle_categorical='onehot', num_features=None):
         self.features = features
         self.label = label
         self.home_dir = home_dir

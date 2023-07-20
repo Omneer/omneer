@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.preprocessing import StandardScaler
@@ -11,10 +12,13 @@ from mpl_toolkits.mplot3d import Axes3D
 from sklearn.cluster import KMeans
 from pathlib import Path
 from sklearn.feature_selection import f_classif
+from sklearn.decomposition import PCA
+from umap import UMAP
+from sklearn.ensemble import IsolationForest
 
 
 # Specify the output directory for saving figures
-output_dir = Path.cwd().parent / 'visualization/raw'
+output_dir = Path.cwd().parent / 'omneer_files/visualization/raw'
 
 
 def load_and_preprocess_data(file_name: Path) -> pd.DataFrame:
@@ -38,6 +42,36 @@ def transform_data(df: pd.DataFrame) -> pd.DataFrame:
     df_melt = pd.melt(df, id_vars='PD', var_name='Metabolite', value_name='Concentration')
 
     return df_melt
+
+def create_interactive_scatters(df: pd.DataFrame):
+    for col in df.columns[2:]:
+        fig = px.scatter(df, x=col, y="PD", color="PD", size=abs(df[col]), hover_data=df.columns)
+        fig.update_layout(title=f'Interactive Scatter Plot: {col} vs PD')
+        fig.show()
+
+def create_3d_scatters(df: pd.DataFrame):
+    fig = px.scatter_3d(df, x=df.columns[2], y=df.columns[3], z=df.columns[4],
+                        color='PD', symbol='PD', opacity=0.7)
+    fig.update_layout(margin=dict(l=0, r=0, b=0, t=0))
+
+def perform_pca(df: pd.DataFrame):
+    pca = PCA(n_components=2)
+    components = pca.fit_transform(df.drop(['Patient', 'PD'], axis=1))
+    fig = px.scatter(components, x=0, y=1, color=df['PD'])
+    fig.show()
+
+def perform_umap(df: pd.DataFrame):
+    umap = UMAP(n_components=2)
+    components = umap.fit_transform(df.drop(['Patient', 'PD'], axis=1))
+    fig = px.scatter(components, x=0, y=1, color=df['PD'])
+    fig.show()
+
+def analyze_outliers(df: pd.DataFrame):
+    iforest = IsolationForest(contamination=0.05)
+    preds = iforest.fit_predict(df.drop(['Patient', 'PD'], axis=1))
+    df['outlier'] = preds
+    fig = px.scatter(df, x=df.columns[2], y="PD", color='outlier')
+    fig.show()
 
 
 def create_boxplot(df_melt: pd.DataFrame):
@@ -247,34 +281,49 @@ def main():
         df_melt = transform_data(df)
 
         # Create boxplot
-        #create_boxplot(df_melt)
+        create_boxplot(df_melt)
 
         # Create pairplot
-        #create_pairplot(df)
+        create_pairplot(df)
 
         # Calculate correlations
         corr = calculate_correlations(df)
 
         # Create heatmap
-        #create_heatmap(corr)
+        create_heatmap(corr)
 
         # Determine the grid for subplots
         num_rows, num_cols = determine_grid(df)
 
         # Create histograms
-        #create_histograms(df, num_rows, num_cols)
+        create_histograms(df, num_rows, num_cols)
 
         # Create violin plot
-        #create_violinplot(df_melt)
+        create_violinplot(df_melt)
 
         # Create t-SNE plot
-        #create_tsne(df)
+        create_tsne(df)
 
         # Calculate feature importance
         importance_df = calculate_feature_importance(df)
             
         # Plot feature importance
         plot_feature_importance(importance_df)
+
+        # Create interactive scatter plots
+        create_interactive_scatters(df)
+
+        # Create 3D scatter plots
+        create_3d_scatters(df)
+
+        # Perform PCA and visualize
+        perform_pca(df)
+
+        # Perform UMAP and visualize
+        perform_umap(df)
+
+        # Analyze and visualize outliers
+        analyze_outliers(df)
 
 
 # Run the main function

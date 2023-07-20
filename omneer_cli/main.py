@@ -16,6 +16,7 @@ import omneer_cli.processing.main as processing
 from omneer_cli.processing.main import predict
 from omneer_cli.processing.preprocess.preprocess import Data, preprocess_data
 from omneer_cli.processing.visualization.raw.vis import load_and_preprocess_data, calculate_feature_importance, plot_feature_importance
+from omneer_cli.processing.visualization.raw.vis import load_and_preprocess_data, transform_data, create_boxplot, calculate_correlations, create_heatmap, determine_grid, create_histograms, create_tsne
 from omneer_cli.processing.visualization.raw.eda import load_and_clean_data, perform_eda
 from omneer_cli.processing.preprocess.features import process_data
 
@@ -210,6 +211,11 @@ def preprocess_command():
     scale_method = typer.prompt("Enter the scaling method (robust, quantile, standard, minmax, yeo-johnson)")
     transform_method = typer.prompt("Enter the transformation method (log, sqrt, None for no transformation)")
     feature_selection = typer.prompt("Enter the feature selection method (pca, linear, automl, None for no feature selection)")
+    num_selected_features = None
+    if feature_selection.lower() == 'automl':
+        num_selected_features = typer.prompt("Enter the number of features to select using AutoML")
+        num_selected_features = int(num_selected_features)  # Convert to an integer
+
     outlier_detection = typer.confirm("Would you like to perform outlier detection and removal?")
     augment_data = typer.confirm("Would you like to perform data augmentation using SMOTE?")
     handle_categorical = typer.prompt("Enter the method to handle categorical variables (onehot, ordinal)")
@@ -251,13 +257,15 @@ def preprocess_command():
                     feature_selection=feature_selection,
                     transform_method=transform_method,
                     augment_data=augment_data,
-                    handle_categorical=handle_categorical
+                    handle_categorical=handle_categorical,
+                    num_features=num_selected_features  # Pass the selected number of features
                 )
             console.print(f"[bold green]Preprocessing completed! Preprocessed data is saved in {preprocessed_data}[/bold green]")
         except Exception as e:
             console.print(f"[bold red]An error occurred during preprocessing: {e}[/bold red]")
     else:
         console.print("[bold yellow]Preprocessing cancelled by user.[/bold yellow]")
+
 
 @main.command(name="features", help="Create new features CSV file")
 def features_command():
@@ -350,6 +358,47 @@ def analyze():
         raise typer.Exit()
 
     typer.echo("[bold green]Analysis completed![/bold green]")
+
+@main.command("visualize")
+def visualize():
+    # Directories to be created
+    home_dir = Path.home()
+    omneer_files_dir = home_dir / "omneer_files"
+    data_dir = omneer_files_dir / "data"
+    raw_dir = data_dir / "raw"
+
+    # Prompt for CSV file name
+    csvfile = typer.prompt("Enter the name of the CSV file:")
+
+    # Load and preprocess data
+    df = load_and_preprocess_data(raw_dir / csvfile)
+
+    # Transform data
+    df_melt = transform_data(df)
+
+    console.print("Please select the type of visualization you want to perform:", style="bold underline")
+
+    # Visualization options
+    console.print("[1] Box Plot")
+    console.print("[2] Heatmap")
+    console.print("[3] Histogram")
+    console.print("[4] t-SNE plot")
+
+    # Prompt for visualization type
+    vis_type = typer.prompt("Enter the number corresponding to your choice:")
+
+    if vis_type == '1':
+        create_boxplot(df_melt)
+    elif vis_type == '2':
+        corr = calculate_correlations(df)
+        create_heatmap(corr)
+    elif vis_type == '3':
+        num_rows, num_cols = determine_grid(df)
+        create_histograms(df, num_rows, num_cols)
+    elif vis_type == '4':
+        create_tsne(df)
+    else:
+        console.print("Invalid option. Please run the command again and select a valid option.", style="bold red")
 
 if __name__ == "__main__":
     main()
