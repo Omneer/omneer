@@ -1,5 +1,5 @@
-import torch
 import pandas as pd
+import torch
 import numpy as np
 import logging
 from sklearn.experimental import enable_iterative_imputer
@@ -10,20 +10,41 @@ from sklearn.pipeline import Pipeline
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.decomposition import PCA
 from sklearn.ensemble import IsolationForest
-from sklearn.feature_selection import SelectFromModel, SelectKBest, f_classif
+from sklearn.feature_selection import SelectFromModel, SelectKBest, f_classif, RFE
 from sklearn.preprocessing import FunctionTransformer
-from sklearn.linear_model import LinearRegression
+from sklearn.neighbors import LocalOutlierFactor
+from sklearn.svm import OneClassSVM
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+from sklearn.decomposition import KernelPCA
+from umap import UMAP
+from imblearn.over_sampling import SMOTE, ADASYN, BorderlineSMOTE, SVMSMOTE
+from category_encoders import TargetEncoder, CatBoostEncoder, BinaryEncoder, HashingEncoder
+from sklearn.model_selection import cross_val_score
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn import metrics
 from pathlib import Path
-from tqdm import tqdm
+import joblib
+import imblearn.under_sampling as undersampling
+import imblearn.ensemble as ensemble_methods
+from sklearn.inspection import permutation_importance
 from tpot import TPOTClassifier
-from imblearn.over_sampling import SMOTE
-from joblib import Parallel, delayed
-from sklearn.exceptions import NotFittedError
+import h2o
+from h2o.automl import H2OAutoML
+from sklearn.feature_selection import VarianceThreshold
+from tensorflow.keras.layers import Input, Dense
+from tensorflow.keras.models import Model, load_model
+#from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
+#from pytorch_tabnet.tab_model import TabNetClassifier
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
 
 # Custom Transformer for handling missing values
+# Advanced Imputation Techniques
 class CustomImputer(BaseEstimator, TransformerMixin):
     def __init__(self, method='iterative', n_neighbors=5, max_iter=10):
         self.method = method
@@ -35,49 +56,132 @@ class CustomImputer(BaseEstimator, TransformerMixin):
             self.imputer_ = IterativeImputer(max_iter=self.max_iter, random_state=0)
         elif self.method == 'knn':
             self.imputer_ = KNNImputer(n_neighbors=self.n_neighbors)
-        else:
-            self.imputer_ = SimpleImputer(strategy=self.method)
+        elif self.method == 'simple':
+            self.imputer_ = SimpleImputer(strategy='mean')
         self.imputer_.fit(X)
         return self
 
     def transform(self, X):
         return self.imputer_.transform(X)
+    
+# Deep Learning-based Feature Extraction
+class AutoencoderFeatureExtractor(BaseEstimator, TransformerMixin):
+    def __init__(self, encoding_dim=32, epochs=50):
+        self.encoding_dim = encoding_dim
+        self.epochs = epochs
+
+    def fit(self, X, y=None):
+        input_dim = X.shape[1]
+        
+        input_layer = Input(shape=(input_dim, ))
+        encoder_layer = Dense(self.encoding_dim, activation="relu")(input_layer)
+        decoder_layer = Dense(input_dim, activation='sigmoid')(encoder_layer)
+        
+        self.autoencoder = Model(inputs=input_layer, outputs=decoder_layer)
+        self.encoder = Model(inputs=input_layer, outputs=encoder_layer)
+        
+        self.autoencoder.compile(optimizer='adam', loss='binary_crossentropy')
+        self.autoencoder.fit(X, X, epochs=self.epochs, batch_size=256, shuffle=True, verbose=0)
+        
+        return self
+
+    def transform(self, X):
+        return self.encoder.predict(X)
 
 # AutoML for feature selection
-# AutoML for feature selection
-# AutoML for feature selection
-def automl_feature_selection(X, y, num_features):
-    tpot = TPOTClassifier(generations=5, population_size=50, verbosity=2)
-    tpot.fit(X, y)
+def permutation_importance_feature_selection(X, y, model=RandomForestClassifier(), num_features=None):
+    model.fit(X, y)
+    result = permutation_importance(model, X, y, n_repeats=10)
+    sorted_idx = result.importances_mean.argsort()
+    
+    if num_features is not None:
+        sorted_idx = sorted_idx[-num_features:]
+    
+    return X[:, sorted_idx]
 
-    # Get the feature importances of the final model
-    feature_importances = tpot.fitted_pipeline_.steps[-1][1].feature_importances_
+# Data Cleaning
+def data_cleaning(X):
+    # Remove duplicate columns
+    _, unique_columns = np.unique(X, axis=1, return_index=True)
+    X = X[:, unique_columns]
 
-    # Get the indices of the features sorted by importance
-    indices = np.argsort(feature_importances)
+    # Remove constant and quasi-constant columns
+    constant_filter = VarianceThreshold(threshold=0.01)
+    X = constant_filter.fit_transform(X)
 
-    # Select the top num_features features
-    top_indices = indices[-num_features:]
+    return X
 
-    # Return only the top num_features features
-    return X[:, top_indices]
-
-
-# Data augmentation using SMOTE
-def smote_augmentation(X, y):
-    smote = SMOTE()
-    return smote.fit_resample(X, y)
+# Data augmentation using various methods
+def data_augmentation(X, y, method='smote'):
+    if method == 'smote':
+        augmenter = SMOTE()
+    elif method == 'adasyn':
+        augmenter = ADASYN()
+    elif method == 'borderline_smote':
+        augmenter = BorderlineSMOTE()
+    elif method == 'svm_smote':
+        augmenter = SVMSMOTE()
+    X_resampled, y_resampled = augmenter.fit_resample(X, y)
+    return X_resampled, y_resampled
 
 # Advanced scaling method
-def yeo_johnson_scaling(X):
-    scaler = PowerTransformer(method='yeo-johnson')
+def advanced_scaling(X, method='yeo_johnson'):
+    if method == 'yeo_johnson':
+        scaler = PowerTransformer(method='yeo-johnson')
+    elif method == 'quantile_normal':
+        scaler = QuantileTransformer(output_distribution='normal')
+    elif method == 'quantile_uniform':
+        scaler = QuantileTransformer(output_distribution='uniform')
+    elif method == 'standard':
+        scaler = StandardScaler()
+    elif method == 'min_max':
+        scaler = MinMaxScaler()
     return scaler.fit_transform(X)
+
+# Advanced categorical encoding
+def advanced_categorical_encoding(X, method='onehot'):
+    if method == 'onehot':
+        encoder = OneHotEncoder(handle_unknown='ignore')
+    elif method == 'target':
+        encoder = TargetEncoder()
+    elif method == 'catboost':
+        encoder = CatBoostEncoder()
+    elif method == 'binary':
+        encoder = BinaryEncoder()
+    elif method == 'hashing':
+        encoder = HashingEncoder()
+    return encoder.fit_transform(X)
+
+# Advanced outlier detection
+def advanced_outlier_detection(X, method='isolation_forest'):
+    if method == 'isolation_forest':
+        detector = IsolationForest(contamination=0.1)
+    elif method == 'local_outlier_factor':
+        detector = LocalOutlierFactor(novelty=True)
+    elif method == 'one_class_svm':
+        detector = OneClassSVM(nu=0.1)
+    outliers = detector.fit_predict(X)
+    return X[outliers == 1]
+
+# Advanced feature extraction
+def advanced_feature_extraction(X, method='pca', n_components=2):
+    if method == 'pca':
+        extractor = PCA(n_components=n_components)
+    elif method == 'kernel_pca':
+        extractor = KernelPCA(n_components=n_components)
+    elif method == 'tsne':
+        extractor = TSNE(n_components=n_components)
+    elif method == 'umap':
+        extractor = UMAP(n_components=n_components)
+    return extractor.fit_transform(X)
 
 class Data(torch.utils.data.Dataset):
     def __init__(self, label, features, csv_dir, home_dir, 
                  impute_method='iterative', scale_method='quantile', 
                  outlier_detection=False, feature_selection=None, transform_method=None, 
-                 augment_data=False, handle_categorical='onehot', num_features=None):
+                 augment_data=False, handle_categorical='onehot', num_features=None,
+                 data_augmentation_method='smote', outlier_detection_method='isolation_forest',
+                 feature_extraction_method=None, categorical_encoding_method='onehot'):
         self.features = features
         self.label = label
         self.home_dir = home_dir
@@ -88,16 +192,14 @@ class Data(torch.utils.data.Dataset):
         self.transform_method = transform_method
         self.augment_data = augment_data
         self.handle_categorical = handle_categorical
+        self.data_augmentation_method = data_augmentation_method
+        self.outlier_detection_method = outlier_detection_method
+        self.feature_extraction_method = feature_extraction_method
+        self.categorical_encoding_method = categorical_encoding_method
         content = self.read_csv(csv_dir)
         self.content = content.dropna(subset=self.features)  # Remove rows with missing features
         self.content.dropna(subset=[self.label], inplace=True)  # Remove rows with missing labels
         self.x, self.y = self.process_data()
-
-    def read_csv(self, csv_file):
-        return pd.read_csv(csv_file)
-
-    def filter_incomplete_cases(self, df):
-        return df.dropna(subset=[self.label] + self.features)
 
     def read_csv(self, csv_file):
         return pd.read_csv(csv_file)
@@ -113,10 +215,10 @@ class Data(torch.utils.data.Dataset):
         # Define the preprocessing for numerical and categorical features
         numerical_transformer = Pipeline(steps=[
             ('imputer', CustomImputer(method=self.impute_method)),
-            ('scaler', PowerTransformer(method='yeo-johnson'))])
+            ('scaler', FunctionTransformer(advanced_scaling, kw_args={'method': self.scale_method}))])
         categorical_transformer = Pipeline(steps=[
             ('imputer', SimpleImputer(strategy='most_frequent')),
-            ('onehot', OneHotEncoder(handle_unknown='ignore'))])
+            ('encoder', FunctionTransformer(advanced_categorical_encoding, kw_args={'method': self.categorical_encoding_method}))])
 
         # Combine the transformers
         preprocessor = ColumnTransformer(
@@ -127,20 +229,32 @@ class Data(torch.utils.data.Dataset):
         # Fit and transform the features
         X = preprocessor.fit_transform(self.content[self.features])
 
+        # Apply feature extraction
+        if self.feature_extraction_method:
+            X = advanced_feature_extraction(X, method=self.feature_extraction_method)
+
         # Apply feature selection using AutoML
         if self.feature_selection == 'automl':
-            X = automl_feature_selection(X, self.content[self.label])
+            X = permutation_importance_feature_selection(X, self.content[self.label])
+            model = LogisticRegression()
+            score = np.mean(cross_val_score(model, X, self.content[self.label], cv=5))
+            logging.info(f"Cross-validation score after feature selection: {score}")
+        
+        if self.feature_extraction_method == 'autoencoder':
+            extractor = AutoencoderFeatureExtractor()
+        else:
+            X = advanced_feature_extraction(X, method=self.feature_extraction_method)
 
-        # Apply SMOTE data augmentation
+
+        # Apply data augmentation
         if self.augment_data:
-            X, y = smote_augmentation(X, self.content[self.label])
+            X, y = data_augmentation(X, self.content[self.label], method=self.data_augmentation_method)
+        else:
+            y = self.content[self.label]
 
         # Outlier detection
         if self.outlier_detection:
-            clf = IsolationForest(contamination=0.1)
-            outliers = clf.fit_predict(X)
-            X = X[outliers == 1]
-            y = y[outliers == 1]
+            X = advanced_outlier_detection(X, method=self.outlier_detection_method)
 
         return X, y
 
@@ -176,10 +290,13 @@ class Data(torch.utils.data.Dataset):
         output_path = output_dir / f"{file_name_without_extension}_preprocessed.csv"
         df.to_csv(output_path, index=False)
 
+# Automated Machine Learning (AutoML)
 def preprocess_data(file_path, label_name, feature_count, home_dir, 
                     impute_method='iterative', scale_method='quantile', 
                     outlier_detection=False, feature_selection=None, transform_method=None,
-                    augment_data=False, handle_categorical='onehot'):
+                    augment_data=False, handle_categorical='onehot', data_augmentation_method='smote',
+                    outlier_detection_method='isolation_forest', feature_extraction_method=None,
+                    categorical_encoding_method='onehot'):
     df = pd.read_csv(file_path, encoding='latin1')
 
     # Extract all the columns. The label column is the second column in the data.
@@ -199,7 +316,11 @@ def preprocess_data(file_path, label_name, feature_count, home_dir,
         feature_selection=feature_selection,
         transform_method=transform_method,
         augment_data=augment_data,
-        handle_categorical=handle_categorical
+        handle_categorical=handle_categorical,
+        data_augmentation_method=data_augmentation_method,
+        outlier_detection_method=outlier_detection_method,
+        feature_extraction_method=feature_extraction_method,
+        categorical_encoding_method=categorical_encoding_method
     )
 
     # Prepare a DataFrame
@@ -217,6 +338,11 @@ def preprocess_data(file_path, label_name, feature_count, home_dir,
 
     # Add back the 'Patient' column to the first position of the preprocessed dataframe
     df_preprocessed.insert(0, 'Patient', df['Patient'])
+
+    # Apply data cleaning
+    X = df_preprocessed.iloc[:, 2:].values
+    X = data_cleaning(X)
+    df_preprocessed.iloc[:, 2:] = X
 
     # Extract the stub of the file path without the extension
     file_name_without_extension = Path(file_path).stem
@@ -244,10 +370,14 @@ if __name__ == "__main__":
                 feature_count=len(features),
                 home_dir=home_dir,
                 impute_method='iterative',
-                scale_method='yeo-johnson',
+                scale_method='quantile_uniform',
                 outlier_detection=False,
                 feature_selection='automl',
                 transform_method=None,
                 augment_data=True,
-                handle_categorical='onehot'
+                handle_categorical='onehot',
+                data_augmentation_method='smote',
+                outlier_detection_method='isolation_forest',
+                feature_extraction_method=None,
+                categorical_encoding_method='onehot'
             )
