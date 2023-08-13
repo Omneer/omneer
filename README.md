@@ -8,7 +8,7 @@ Fueled by Airflow, a dynamic and highly scalable workflow orchestration engine k
 
 This SDK further enhances workflow execution with containerization options, offering independence in task scheduling and a vast array of scalable computing resources. As such, the Omneer SDK represents a perfect convergence of neuroscience, personalized medicine, and cutting-edge technology, promising a new era of advanced and personalized healthcare solutions.
 
-[Discord Community Community]() • [Docs](https://docs.omneer.xyz) • [Installation](#installation) •
+[Docs](https://docs.omneer.xyz) • [Installation](#installation) •
 [Quickstart](#configuration) • [Omneer](https://omneer.xyz)
 
 </div>
